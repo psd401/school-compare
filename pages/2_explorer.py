@@ -11,6 +11,7 @@ from src.viz.charts import (
     create_demographics_chart,
     create_program_demographics_chart,
     create_spending_trend_chart,
+    create_spending_breakdown_chart,
     add_suppression_footnote,
 )
 
@@ -336,6 +337,16 @@ def main():
             if spending_trend:
                 st.markdown("#### 10-Year Spending Trend")
                 fig = create_spending_trend_chart({selected_entity.display_name: spending_trend})
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Spending category breakdown
+            spending_categories = client.get_spending_by_category(org_id)
+            if spending_categories:
+                st.markdown("#### Spending by Program Category")
+                fig = create_spending_breakdown_chart(
+                    spending_categories,
+                    district_name=selected_entity.display_name,
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
             st.caption("Source: OSPI F-196 Financial Reporting Data")

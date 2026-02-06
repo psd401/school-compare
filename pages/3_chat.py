@@ -108,7 +108,7 @@ def main():
         st.markdown("### About")
         st.markdown(
             """
-            This chatbot uses Claude AI to help you explore Washington state
+            This chatbot uses Gemini AI to help you explore Washington state
             education data. It can:
 
             - Search for schools and districts

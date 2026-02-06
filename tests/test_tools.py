@@ -12,7 +12,7 @@ from src.data.models import (
     SpendingData,
     DemographicData,
 )
-from src.chat.tools import execute_tool, TOOL_SCHEMAS, GEMINI_TOOLS, _convert_to_gemini_schema
+from src.chat.tools import execute_tool, TOOL_SCHEMAS, GEMINI_TOOLS, _convert_to_gemini_declaration
 
 
 class TestToolSchemas:
@@ -43,23 +43,26 @@ class TestToolSchemas:
 
 
 class TestGeminiToolConversion:
-    def test_converts_all_tools(self):
-        assert len(GEMINI_TOOLS) == len(TOOL_SCHEMAS)
+    def test_gemini_tools_is_tool_object(self):
+        # GEMINI_TOOLS is now a types.Tool with function_declarations
+        assert GEMINI_TOOLS is not None
+        assert hasattr(GEMINI_TOOLS, 'function_declarations')
+        assert len(GEMINI_TOOLS.function_declarations) == len(TOOL_SCHEMAS)
 
-    def test_converted_tool_has_name(self):
-        converted = _convert_to_gemini_schema(TOOL_SCHEMAS[0])
+    def test_converted_declaration_has_name(self):
+        converted = _convert_to_gemini_declaration(TOOL_SCHEMAS[0])
         assert "name" in converted
         assert converted["name"] == TOOL_SCHEMAS[0]["name"]
 
-    def test_converted_tool_has_parameters(self):
-        converted = _convert_to_gemini_schema(TOOL_SCHEMAS[0])
+    def test_converted_declaration_has_parameters(self):
+        converted = _convert_to_gemini_declaration(TOOL_SCHEMAS[0])
         assert "parameters" in converted
-        assert converted["parameters"]["type"] == "OBJECT"
+        assert converted["parameters"]["type"] == "object"
 
     def test_enum_preserved(self):
         # get_assessment_data has enum for organization_type
         schema = next(s for s in TOOL_SCHEMAS if s["name"] == "get_assessment_data")
-        converted = _convert_to_gemini_schema(schema)
+        converted = _convert_to_gemini_declaration(schema)
         org_type = converted["parameters"]["properties"]["organization_type"]
         assert "enum" in org_type
         assert "School" in org_type["enum"]

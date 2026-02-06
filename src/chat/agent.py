@@ -1,7 +1,8 @@
 """LLM agent for chatbot interactions using Gemini with function calling."""
 
 from typing import Generator
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from config.settings import get_settings
 from .prompts import SYSTEM_PROMPT
@@ -13,14 +14,15 @@ class ChatAgent:
 
     def __init__(self):
         settings = get_settings()
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-
-        self.model = genai.GenerativeModel(
-            model_name=settings.LLM_MODEL,
-            system_instruction=SYSTEM_PROMPT,
-            tools=GEMINI_TOOLS,
-        )
+        self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+        self.model_name = settings.LLM_MODEL
         self.max_tokens = settings.LLM_MAX_TOKENS
+        self.config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            tools=[GEMINI_TOOLS],
+            temperature=settings.LLM_TEMPERATURE,
+            max_output_tokens=settings.LLM_MAX_TOKENS,
+        )
 
     def chat(
         self,
@@ -37,35 +39,29 @@ class ChatAgent:
         Yields:
             Text chunks as they are generated
         """
-        # Convert conversation history to Gemini format
-        gemini_history = []
+        # Convert conversation history to google.genai Content format
+        genai_history = []
         for msg in conversation_history:
             role = "user" if msg["role"] == "user" else "model"
-            gemini_history.append({
-                "role": role,
-                "parts": [msg["content"]]
-            })
+            genai_history.append(
+                types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])])
+            )
 
         # Create chat session with history
-        chat = self.model.start_chat(history=gemini_history)
+        chat = self.client.chats.create(
+            model=self.model_name,
+            config=self.config,
+            history=genai_history,
+        )
 
         # Send message and get response
-        response = chat.send_message(user_message)
+        response = chat.send_message(message=user_message)
 
         # Process response, handling function calls
-        while response.candidates[0].content.parts:
+        while True:
             # Check for function calls
-            function_call = None
-            text_parts = []
-
-            for part in response.candidates[0].content.parts:
-                if hasattr(part, 'function_call') and part.function_call:
-                    function_call = part.function_call
-                elif hasattr(part, 'text') and part.text:
-                    text_parts.append(part.text)
-
-            # If there's a function call, execute it
-            if function_call:
+            if response.function_calls:
+                function_call = response.function_calls[0]
                 tool_name = function_call.name
                 tool_args = dict(function_call.args)
 
@@ -74,21 +70,21 @@ class ChatAgent:
                 # Execute the tool
                 tool_result = execute_tool(tool_name, tool_args)
 
-                # Send function response back to model
+                # Send function response back via chat session
+                function_response = types.Part.from_function_response(
+                    name=tool_name,
+                    response={"result": tool_result},
+                )
                 response = chat.send_message(
-                    genai.protos.Content(
-                        parts=[genai.protos.Part(
-                            function_response=genai.protos.FunctionResponse(
-                                name=tool_name,
-                                response={"result": tool_result}
-                            )
-                        )]
+                    message=types.Content(
+                        role="user",
+                        parts=[function_response],
                     )
                 )
             else:
                 # No function call - yield text and exit
-                if text_parts:
-                    yield "".join(text_parts)
+                if response.text:
+                    yield response.text
                 break
 
     def get_response(

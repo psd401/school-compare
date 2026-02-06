@@ -5,6 +5,7 @@ import math
 
 from src.data.combined import (
     METRICS,
+    SCHOOL_METRICS,
     get_metric_label,
     get_metric_format,
     format_metric_value,
@@ -38,6 +39,25 @@ class TestMetrics:
 
     def test_metric_count(self):
         assert len(METRICS) == 12
+
+
+class TestSchoolMetrics:
+    def test_all_school_metrics_have_required_keys(self):
+        for key, meta in SCHOOL_METRICS.items():
+            assert "label" in meta, f"{key} missing 'label'"
+            assert "category" in meta, f"{key} missing 'category'"
+            assert "format" in meta, f"{key} missing 'format'"
+
+    def test_school_metrics_count(self):
+        assert len(SCHOOL_METRICS) == 10
+
+    def test_school_metrics_exclude_spending_and_graduation(self):
+        assert "per_pupil_expenditure" not in SCHOOL_METRICS
+        assert "graduation_rate_4yr" not in SCHOOL_METRICS
+
+    def test_school_metrics_are_subset_of_district_metrics(self):
+        for key in SCHOOL_METRICS:
+            assert key in METRICS, f"School metric '{key}' not in district METRICS"
 
 
 class TestGetMetricLabel:

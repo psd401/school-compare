@@ -10,6 +10,7 @@ from src.data.models import (
     GraduationData,
     StaffingData,
     SpendingData,
+    SpendingCategory,
     ComparisonEntity,
 )
 
@@ -195,6 +196,27 @@ class TestSpendingData:
         )
         assert s.per_pupil_expenditure == 15000.0
         assert s.enrollment == 50000
+
+
+class TestSpendingCategory:
+    def test_creation(self):
+        c = SpendingCategory(
+            district_code="17001",
+            category="Basic Education",
+            amount=500000000.0,
+            percent_of_total=55.2,
+        )
+        assert c.category == "Basic Education"
+        assert c.amount == 500000000.0
+        assert c.percent_of_total == 55.2
+
+    def test_optional_fields_default_none(self):
+        c = SpendingCategory(
+            district_code="17001",
+            category="Special Education",
+        )
+        assert c.amount is None
+        assert c.percent_of_total is None
 
 
 class TestComparisonEntity:

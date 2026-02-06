@@ -1,7 +1,7 @@
 """Tool definitions for Gemini function calling."""
 
 from typing import Any
-import google.generativeai as genai
+from google.genai import types
 
 from src.data.client import get_client
 
@@ -476,35 +476,17 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
 # Export for convenience
 AVAILABLE_TOOLS = TOOL_SCHEMAS
 
-# Convert to Gemini format
-def _convert_to_gemini_schema(schema: dict) -> dict:
-    """Convert a tool schema to Gemini's function declaration format."""
-    properties = {}
-    for prop_name, prop_def in schema["input_schema"]["properties"].items():
-        prop_type = prop_def.get("type", "string").upper()
-        if prop_type == "STRING":
-            prop_type = "STRING"
 
-        gemini_prop = {
-            "type": prop_type,
-            "description": prop_def.get("description", ""),
-        }
-
-        # Handle enums
-        if "enum" in prop_def:
-            gemini_prop["enum"] = prop_def["enum"]
-
-        properties[prop_name] = gemini_prop
-
+def _convert_to_gemini_declaration(schema: dict) -> dict:
+    """Convert a tool schema to a dict suitable for types.FunctionDeclaration."""
     return {
         "name": schema["name"],
         "description": schema["description"],
-        "parameters": {
-            "type": "OBJECT",
-            "properties": properties,
-            "required": schema["input_schema"].get("required", []),
-        },
+        "parameters": schema["input_schema"],
     }
 
-# Gemini tools as function declarations
-GEMINI_TOOLS = [_convert_to_gemini_schema(s) for s in TOOL_SCHEMAS]
+
+# Build google.genai Tool object with all function declarations
+GEMINI_TOOLS = types.Tool(
+    function_declarations=[_convert_to_gemini_declaration(s) for s in TOOL_SCHEMAS]
+)
