@@ -115,9 +115,10 @@ def main():
     # Year selector
     col1, col2 = st.columns([1, 3])
     with col1:
+        available_years = client.get_available_years()
         school_year = st.selectbox(
             "School Year:",
-            options=["2023-24", "2022-23", "2021-22"],
+            options=available_years if available_years else ["2023-24"],
             index=0,
         )
 

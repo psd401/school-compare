@@ -5,8 +5,13 @@ datasets:
   # Assessment data (SBA ELA, SBA Math, WCAS Science)
   assessment:
     id: "x73g-mrqp"
-    name: "Report Card Assessment Data"
+    name: "Report Card Assessment Data (through 2023-24)"
     description: "State assessment results by school, district, and student group"
+
+  assessment_2024_25:
+    id: "h5d9-vgwi"
+    name: "Report Card Assessment Data 2024-25"
+    description: "State assessment results for 2024-25 school year (separate dataset from OSPI)"
     fields:
       - SchoolYear
       - OrganizationLevel  # State, District, School

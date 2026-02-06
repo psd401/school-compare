@@ -56,7 +56,8 @@ def get_settings() -> Settings:
 # Dataset IDs for data.wa.gov
 # These are loaded from config/datasets.yaml but kept here as fallback
 DATASET_IDS = {
-    "assessment": "x73g-mrqp",  # SBA/WCAS Assessment Results
+    "assessment": "x73g-mrqp",  # SBA/WCAS Assessment Results (through 2023-24)
+    "assessment_2024_25": "h5d9-vgwi",  # SBA/WCAS Assessment Results (2024-25+)
     "enrollment": "2rwv-gs2e",  # Enrollment by demographics
     "graduation": "76iv-8ed4",  # Graduation rates
     "teachers": "yp28-ks6d",  # Teacher data
