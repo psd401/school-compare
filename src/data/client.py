@@ -66,7 +66,7 @@ class OSPIClient:
         """Search for schools by name."""
         where_clause = f"upper(schoolname) like upper('%{query}%')"
         results = _self._query(
-            DATASET_IDS["assessment"],
+            DATASET_IDS["assessment_2024_25"],
             select="DISTINCT schoolcode, schoolname, districtcode, districtname, county, esdname",
             where=f"{where_clause} AND organizationlevel='School'",
             order="schoolname",
@@ -96,7 +96,7 @@ class OSPIClient:
         """Search for districts by name."""
         where_clause = f"upper(districtname) like upper('%{query}%')"
         results = _self._query(
-            DATASET_IDS["assessment"],
+            DATASET_IDS["assessment_2024_25"],
             select="DISTINCT districtcode, districtname, county, esdname",
             where=f"{where_clause} AND organizationlevel='District'",
             order="districtname",
@@ -123,7 +123,7 @@ class OSPIClient:
     def get_all_districts(_self) -> list[District]:
         """Get all districts in Washington state."""
         results = _self._query(
-            DATASET_IDS["assessment"],
+            DATASET_IDS["assessment_2024_25"],
             select="DISTINCT districtcode, districtname, county, esdname",
             where="organizationlevel='District'",
             order="districtname",
@@ -145,6 +145,31 @@ class OSPIClient:
                     )
                 )
         return districts
+
+    # -------------------------------------------------------------------------
+    # Available Years
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _assessment_dataset_id(school_year: str) -> str:
+        """Return the correct assessment dataset ID for the given school year."""
+        if school_year >= "2024-25":
+            return DATASET_IDS["assessment_2024_25"]
+        return DATASET_IDS["assessment"]
+
+    @st.cache_data(ttl=86400, show_spinner=False)
+    def get_available_years(_self) -> list[str]:
+        """Get available school years from both assessment datasets, most recent first."""
+        years = set()
+        for ds_key in ("assessment", "assessment_2024_25"):
+            results = _self._query(
+                DATASET_IDS[ds_key],
+                select="DISTINCT schoolyear",
+                order="schoolyear DESC",
+                limit=20,
+            )
+            years.update(r["schoolyear"] for r in results if r.get("schoolyear"))
+        return sorted(years, reverse=True)
 
     # -------------------------------------------------------------------------
     # Assessment Data Methods
@@ -184,8 +209,10 @@ class OSPIClient:
 
         where_clause = " AND ".join(where_parts)
 
+        dataset_id = _self._assessment_dataset_id(school_year)
+
         results = _self._query(
-            DATASET_IDS["assessment"],
+            dataset_id,
             where=where_clause,
             limit=1000,
         )
@@ -208,6 +235,12 @@ class OSPIClient:
             else:
                 percent_met = None
 
+            # Column name changed between dataset versions
+            count_met = _safe_int(
+                r.get("count_consistent_grade_level")
+                or r.get("count_consistent_grade_level_knowledge_and_above")
+            )
+
             assessments.append(
                 AssessmentData(
                     organization_id=organization_id,
@@ -218,7 +251,7 @@ class OSPIClient:
                     student_group=r.get("studentgroup", student_group),
                     student_group_type=r.get("studentgrouptype", ""),
                     count_expected=_safe_int(r.get("count_of_students_expected")),
-                    count_met_standard=_safe_int(r.get("count_consistent_grade_level_knowledge_and_above")),
+                    count_met_standard=count_met,
                     percent_met_standard=percent_met,
                     percent_level_1=level1,
                     percent_level_2=level2,

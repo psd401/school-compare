@@ -77,9 +77,10 @@ def main():
         st.caption(f"📍 {selected_entity.county} County • {selected_entity.esd_name}")
 
     # Year selector
+    available_years = client.get_available_years()
     school_year = st.selectbox(
         "School Year:",
-        options=["2023-24", "2022-23", "2021-22"],
+        options=available_years if available_years else ["2023-24"],
         index=0,
         key="explorer_year",
     )

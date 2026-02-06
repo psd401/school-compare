@@ -105,9 +105,10 @@ def _load_assessment_data() -> pd.DataFrame:
     client = _get_socrata_client()
 
     # Query all district-level assessment data for All Students, All Grades
+    # Use 2024-25 dataset (most recent available assessment data)
     results = client.get(
-        DATASET_IDS["assessment"],
-        where="organizationlevel='District' AND schoolyear='2023-24' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
+        DATASET_IDS["assessment_2024_25"],
+        where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
         select="districtcode, testsubject, percentlevel3, percentlevel4",
         limit=5000,
     )
