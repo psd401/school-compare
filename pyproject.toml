@@ -1,0 +1,39 @@
+[project]
+name = "school-compare"
+version = "0.1.0"
+description = "Washington School Comparison Tool - Compare schools/districts across demographics, achievement, staffing, and spending"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.40.0",
+    "pandas>=2.2.0",
+    "plotly>=5.24.0",
+    "sodapy>=2.2.0",
+    "google-generativeai>=0.8.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

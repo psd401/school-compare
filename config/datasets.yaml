@@ -1,0 +1,139 @@
+# Washington State OSPI Datasets on data.wa.gov
+# Dataset IDs may change - verify against https://data.wa.gov
+
+datasets:
+  # Assessment data (SBA ELA, SBA Math, WCAS Science)
+  assessment:
+    id: "x73g-mrqp"
+    name: "Report Card Assessment Data"
+    description: "State assessment results by school, district, and student group"
+    fields:
+      - SchoolYear
+      - OrganizationLevel  # State, District, School
+      - County
+      - ESDName
+      - DistrictCode
+      - DistrictName
+      - SchoolCode
+      - SchoolName
+      - StudentGroup
+      - StudentGroupType
+      - GradeLevel
+      - TestSubject
+      - TestAdministration
+      - CountOfStudentsExpectedToTest
+      - CountMetStandard
+      - PercentMetStandard
+      - PercentLevel1
+      - PercentLevel2
+      - PercentLevel3
+      - PercentLevel4
+      - Suppression
+
+  # Enrollment demographics
+  enrollment:
+    id: "2rwv-gs2e"
+    name: "Report Card Enrollment"
+    description: "Student enrollment counts by demographics"
+    fields:
+      - SchoolYear
+      - OrganizationLevel
+      - DistrictCode
+      - DistrictName
+      - SchoolCode
+      - SchoolName
+      - StudentGroup
+      - StudentGroupType
+      - Headcount
+      - PercentOfSchool
+
+  # Graduation rates
+  graduation:
+    id: "76iv-8ed4"
+    name: "Report Card Graduation"
+    description: "Four and five year adjusted cohort graduation rates"
+    fields:
+      - SchoolYear
+      - OrganizationLevel
+      - DistrictCode
+      - DistrictName
+      - SchoolCode
+      - SchoolName
+      - StudentGroup
+      - Cohort
+      - GraduationRate
+      - Suppression
+
+  # Teacher/staffing data
+  teachers:
+    id: "yp28-ks6d"
+    name: "Report Card Teacher Qualifications"
+    description: "Teacher experience and qualification data"
+    fields:
+      - SchoolYear
+      - OrganizationLevel
+      - DistrictCode
+      - DistrictName
+      - SchoolCode
+      - SchoolName
+      - TeacherCount
+      - AvgYearsExperience
+      - PercentWithMasters
+      - StudentTeacherRatio
+
+  # School/District directory
+  directory:
+    id: "fhxx-d5zv"
+    name: "Washington State Public Schools"
+    description: "Directory of Washington state public schools and districts"
+    fields:
+      - OrganizationId
+      - OrganizationType
+      - OrganizationName
+      - DistrictCode
+      - DistrictName
+      - County
+      - ESDName
+      - Address
+      - City
+      - State
+      - Zip
+      - GradeLevelServed
+
+# Student group mappings for demographic analysis
+student_groups:
+  race_ethnicity:
+    - "American Indian/Alaskan Native"
+    - "Asian"
+    - "Black/African American"
+    - "Hispanic/Latino of any race(s)"
+    - "Native Hawaiian/Other Pacific Islander"
+    - "Two or More Races"
+    - "White"
+
+  program:
+    - "Students with Disabilities"
+    - "English Language Learners"
+    - "Low-Income"
+    - "Migrant"
+    - "Homeless"
+    - "Foster Care"
+    - "Military Parent"
+
+  gender:
+    - "Female"
+    - "Male"
+    - "Gender X"
+
+# Test subjects
+test_subjects:
+  - "ELA"
+  - "Math"
+  - "Science"
+
+# Suppression indicator values
+suppression_indicators:
+  - ">"  # Percentage too high
+  - "<"  # Percentage too low
+  - "*"  # Small n-size
+  - "N/A"  # Not applicable
