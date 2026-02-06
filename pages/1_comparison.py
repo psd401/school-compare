@@ -187,7 +187,7 @@ def main():
 
         if any(assessment_data.values()):
             fig = create_achievement_comparison(assessment_data)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
             st.caption(add_suppression_footnote())
         else:
             st.warning("No assessment data available for the selected entities.")
@@ -204,7 +204,7 @@ def main():
 
         if any(assessment_data.values()):
             fig = create_score_distribution(assessment_data, subject=subject)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.warning("No score distribution data available.")
 
@@ -217,14 +217,14 @@ def main():
         with demo_col1:
             if any(demographic_data.values()):
                 fig = create_demographics_chart(demographic_data, group_type="Race/Ethnicity")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 st.warning("No race/ethnicity data available.")
 
         with demo_col2:
             if any(demographic_data.values()):
                 fig = create_program_demographics_chart(demographic_data)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 st.warning("No program participation data available.")
 
@@ -241,7 +241,7 @@ def main():
 
         if any(graduation_data.values()):
             fig = create_graduation_chart(graduation_data, cohort=cohort)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
             st.caption(add_suppression_footnote())
         else:
             st.warning("No graduation data available for the selected entities.")
@@ -252,7 +252,7 @@ def main():
 
         if any(staffing_data.values()):
             fig = create_staffing_chart(staffing_data)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             # Also show raw data in table
             st.markdown("#### Staffing Details")
@@ -270,7 +270,7 @@ def main():
                         }
                     )
             if staff_rows:
-                st.dataframe(staff_rows, use_container_width=True)
+                st.dataframe(staff_rows, width="stretch")
         else:
             st.warning("No staffing data available for the selected entities.")
 
@@ -293,7 +293,7 @@ def main():
 
             if per_pupil_comparison:
                 fig = create_spending_chart(per_pupil_comparison)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             # Spending details table
             st.markdown("#### Spending Details")
@@ -309,13 +309,13 @@ def main():
                     }
                 )
             if spending_rows:
-                st.dataframe(spending_rows, use_container_width=True)
+                st.dataframe(spending_rows, width="stretch")
 
             # Trend chart
             if spending_trends:
                 st.markdown("#### 10-Year Spending Trends")
                 fig = create_spending_trend_chart(spending_trends)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             st.caption("Source: OSPI F-196 Financial Reporting Data")
         else:
