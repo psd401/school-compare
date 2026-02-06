@@ -199,7 +199,7 @@ def main():
                 )
 
         if summary_data:
-            st.dataframe(summary_data, use_container_width=True)
+            st.dataframe(summary_data, width="stretch")
             st.caption(add_suppression_footnote())
 
         # Score distribution chart
@@ -213,7 +213,7 @@ def main():
             {selected_entity.display_name: assessment_data},
             subject=subject,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     else:
         st.info("No assessment data available.")
 
@@ -229,13 +229,13 @@ def main():
                 {selected_entity.display_name: demographic_data},
                 group_type="Race/Ethnicity",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with demo_col2:
             fig = create_program_demographics_chart(
                 {selected_entity.display_name: demographic_data}
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         # Enrollment table
         st.markdown("#### Enrollment Details")
@@ -252,7 +252,7 @@ def main():
                 )
         if enrollment_rows:
             df = pd.DataFrame(enrollment_rows)
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, width="stretch")
     else:
         st.info("No demographic data available.")
 
@@ -272,7 +272,7 @@ def main():
                     }
                 )
         if grad_rows:
-            st.dataframe(grad_rows, use_container_width=True)
+            st.dataframe(grad_rows, width="stretch")
     else:
         st.info("No graduation data available.")
 
@@ -337,7 +337,7 @@ def main():
             if spending_trend:
                 st.markdown("#### 10-Year Spending Trend")
                 fig = create_spending_trend_chart({selected_entity.display_name: spending_trend})
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             # Spending category breakdown
             spending_categories = client.get_spending_by_category(org_id)
@@ -347,7 +347,7 @@ def main():
                     spending_categories,
                     district_name=selected_entity.display_name,
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             st.caption("Source: OSPI F-196 Financial Reporting Data")
         else:

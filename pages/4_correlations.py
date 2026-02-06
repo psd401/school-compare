@@ -151,7 +151,7 @@ fig = create_correlation_scatter(
     entity_code_col=entity_code_col,
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 # Data summary
 col1, col2, col3 = st.columns(3)
