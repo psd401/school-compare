@@ -16,10 +16,12 @@ from .models import (
     GraduationData,
     StaffingData,
     SpendingData,
+    SpendingCategory,
 )
 
 # Path to F-196 spending data CSV
 F196_DATA_PATH = Path(__file__).parent.parent.parent / "data" / "f196" / "per_pupil_expenditure.csv"
+F196_CATEGORIES_PATH = Path(__file__).parent.parent.parent / "data" / "f196" / "expenditures_by_program.csv"
 
 
 class OSPIClient:
@@ -156,6 +158,13 @@ class OSPIClient:
         if school_year >= "2024-25":
             return DATASET_IDS["assessment_2024_25"]
         return DATASET_IDS["assessment"]
+
+    @staticmethod
+    def _graduation_dataset_id(school_year: str) -> str:
+        """Return the correct graduation dataset ID for the given school year."""
+        if school_year >= "2024-25":
+            return DATASET_IDS["graduation_2024_25"]
+        return DATASET_IDS["graduation"]
 
     @st.cache_data(ttl=86400, show_spinner=False)
     def get_available_years(_self) -> list[str]:
@@ -436,8 +445,10 @@ class OSPIClient:
         if student_group:
             where_clause += f" AND studentgroup='{student_group}'"
 
+        dataset_id = _self._graduation_dataset_id(school_year)
+
         results = _self._query(
-            DATASET_IDS["graduation"],
+            dataset_id,
             where=where_clause,
             limit=500,
         )
@@ -445,8 +456,14 @@ class OSPIClient:
         graduation = []
         for r in results:
             # Check for suppression via dat field
-            dat_value = r.get("dat", "")
-            is_suppressed = dat_value is not None and "N<10" in str(dat_value)
+            # New 2024-25 dataset uses "No DAT" in addition to "N<10"
+            dat_value = r.get("dat", "") or ""
+            suppression = r.get("suppression", "") or ""
+            is_suppressed = (
+                "N<10" in str(dat_value)
+                or "No DAT" in str(dat_value)
+                or bool(suppression and suppression not in ("", "None"))
+            )
 
             # Graduation rate is stored as decimal (0.85 = 85%)
             grad_rate = _safe_float(r.get("graduationrate"))
@@ -612,6 +629,49 @@ class OSPIClient:
                 trend[year] = float(row[col])
 
         return trend
+
+
+    @st.cache_data(ttl=86400, show_spinner=False)
+    def get_spending_by_category(
+        _self,
+        district_code: str,
+        school_year: str = "2024-25",
+    ) -> list[SpendingCategory]:
+        """
+        Fetch spending breakdown by program category for a district.
+
+        Reads from pre-processed CSV file (data/f196/expenditures_by_program.csv).
+        Returns list of SpendingCategory with category name, amount, and percent.
+        """
+        if not F196_CATEGORIES_PATH.exists():
+            return []
+
+        df = pd.read_csv(F196_CATEGORIES_PATH)
+
+        # Filter to district and year
+        mask = df['district_code'].astype(str) == str(district_code)
+        if 'school_year' in df.columns:
+            mask = mask & (df['school_year'] == school_year)
+        rows = df[mask]
+
+        if rows.empty:
+            return []
+
+        total = rows['amount'].sum()
+        categories = []
+        for _, row in rows.iterrows():
+            amount = float(row['amount']) if pd.notna(row.get('amount')) else 0
+            pct = (amount / total * 100) if total > 0 else 0
+            categories.append(
+                SpendingCategory(
+                    district_code=str(district_code),
+                    category=row.get('category', 'Unknown'),
+                    amount=amount,
+                    percent_of_total=round(pct, 1),
+                )
+            )
+
+        return categories
 
 
 def _safe_float(value) -> Optional[float]:

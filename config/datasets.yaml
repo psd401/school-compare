@@ -69,6 +69,23 @@ datasets:
       - GraduationRate
       - Suppression
 
+  # Graduation rates (2024-25+)
+  graduation_2024_25:
+    id: "isxb-523t"
+    name: "Report Card Graduation 2024-25"
+    description: "Graduation rates for 2024-25 school year (separate dataset from OSPI)"
+    fields:
+      - SchoolYear
+      - OrganizationLevel
+      - DistrictCode
+      - DistrictName
+      - SchoolCode
+      - SchoolName
+      - StudentGroup
+      - Cohort
+      - GraduationRate
+      - Suppression
+
   # Teacher/staffing data
   teachers:
     id: "yp28-ks6d"

@@ -59,7 +59,8 @@ DATASET_IDS = {
     "assessment": "x73g-mrqp",  # SBA/WCAS Assessment Results (through 2023-24)
     "assessment_2024_25": "h5d9-vgwi",  # SBA/WCAS Assessment Results (2024-25+)
     "enrollment": "2rwv-gs2e",  # Enrollment by demographics
-    "graduation": "76iv-8ed4",  # Graduation rates
+    "graduation": "76iv-8ed4",  # Graduation rates (through 2023-24)
+    "graduation_2024_25": "isxb-523t",  # Graduation rates (2024-25+)
     "teachers": "yp28-ks6d",  # Teacher data
     "directory": "fhxx-d5zv",  # School directory
 }

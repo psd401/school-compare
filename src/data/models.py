@@ -130,6 +130,16 @@ class SpendingData:
 
 
 @dataclass
+class SpendingCategory:
+    """Spending breakdown by program category for a district."""
+
+    district_code: str
+    category: str
+    amount: Optional[float] = None
+    percent_of_total: Optional[float] = None
+
+
+@dataclass
 class ComparisonEntity:
     """A school or district selected for comparison."""
 

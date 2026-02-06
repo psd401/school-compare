@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from src.data.models import AssessmentData, DemographicData, GraduationData, StaffingData
+from src.data.models import AssessmentData, DemographicData, GraduationData, StaffingData, SpendingCategory
 
 
 # Color palette for consistent styling
@@ -543,6 +543,67 @@ def create_equity_gap_chart(
     return fig
 
 
+def create_spending_breakdown_chart(
+    categories: list[SpendingCategory],
+    district_name: str = "",
+) -> go.Figure:
+    """
+    Create a bar chart showing spending breakdown by program category.
+
+    Args:
+        categories: List of SpendingCategory objects
+        district_name: Name of the district for the title
+    """
+    if not categories:
+        return _empty_chart("No spending category data available")
+
+    rows = [
+        {
+            "Category": c.category,
+            "Amount": c.amount or 0,
+            "Percent": c.percent_of_total or 0,
+        }
+        for c in categories
+    ]
+
+    df = pd.DataFrame(rows).sort_values("Amount", ascending=True)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df["Amount"],
+            y=df["Category"],
+            orientation="h",
+            marker_color=COLORS["primary"],
+            text=df.apply(
+                lambda r: f"${r['Amount']:,.0f} ({r['Percent']:.1f}%)", axis=1
+            ),
+            textposition="auto",
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Amount: $%{x:,.0f}<br>"
+                "<extra></extra>"
+            ),
+        )
+    )
+
+    title = "Spending by Program Category"
+    if district_name:
+        title = f"{district_name} — {title}"
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Expenditure ($)",
+        xaxis_tickprefix="$",
+        xaxis_tickformat=",",
+        yaxis_title="",
+        height=max(400, len(rows) * 40 + 100),
+        margin=dict(l=200),
+    )
+
+    return fig
+
+
 def create_correlation_scatter(
     df: pd.DataFrame,
     x_metric: str,
@@ -552,31 +613,40 @@ def create_correlation_scatter(
     highlight_districts: Optional[list[str]] = None,
     x_format: str = "{}",
     y_format: str = "{}",
+    entity_name_col: str = "district_name",
+    entity_code_col: str = "district_code",
 ) -> go.Figure:
     """
-    Create scatter plot for correlating two metrics across districts.
+    Create scatter plot for correlating two metrics across entities.
 
     Args:
-        df: DataFrame with district_code, district_name, enrollment, and metric columns
+        df: DataFrame with entity code, entity name, enrollment, and metric columns
         x_metric: Column name for x-axis metric
         y_metric: Column name for y-axis metric
         x_label: Display label for x-axis
         y_label: Display label for y-axis
-        highlight_districts: List of district codes to highlight
+        highlight_districts: List of entity codes to highlight
         x_format: Format string for x-axis values in tooltip
         y_format: Format string for y-axis values in tooltip
+        entity_name_col: Column name for entity display names
+        entity_code_col: Column name for entity codes (used for highlighting)
     """
     # Filter to rows with both metrics present
-    plot_df = df[[
-        "district_code", "district_name", "enrollment", x_metric, y_metric
-    ]].dropna(subset=[x_metric, y_metric]).copy()
+    required_cols = [entity_code_col, entity_name_col, x_metric, y_metric]
+    if "enrollment" in df.columns:
+        required_cols.append("enrollment")
+    plot_df = df[required_cols].dropna(subset=[x_metric, y_metric]).copy()
+
+    # Ensure enrollment column exists for tooltip
+    if "enrollment" not in plot_df.columns:
+        plot_df["enrollment"] = None
 
     if plot_df.empty:
         return _empty_chart("No data available for selected metrics")
 
     # Create highlight column
     if highlight_districts:
-        plot_df["highlighted"] = plot_df["district_code"].isin(highlight_districts)
+        plot_df["highlighted"] = plot_df[entity_code_col].isin(highlight_districts)
     else:
         plot_df["highlighted"] = False
 
@@ -593,6 +663,9 @@ def create_correlation_scatter(
     # Create figure
     fig = go.Figure()
 
+    # Determine trace name based on entity type
+    trace_name = "Schools" if entity_name_col == "school_name" else "Districts"
+
     # Non-highlighted points
     non_highlight = plot_df[~plot_df["highlighted"]]
     if not non_highlight.empty:
@@ -605,7 +678,7 @@ def create_correlation_scatter(
                 color=COLORS["primary"],
                 opacity=0.5,
             ),
-            text=non_highlight["district_name"],
+            text=non_highlight[entity_name_col],
             customdata=non_highlight[["enrollment", "x_display", "y_display"]].values,
             hovertemplate=(
                 "<b>%{text}</b><br>"
@@ -613,7 +686,7 @@ def create_correlation_scatter(
                 f"{y_label}: %{{customdata[2]}}<br>"
                 "Enrollment: %{customdata[0]:,}<extra></extra>"
             ),
-            name="Districts",
+            name=trace_name,
         ))
 
     # Highlighted points
@@ -628,7 +701,7 @@ def create_correlation_scatter(
                 color=COLORS["warning"],
                 line=dict(width=2, color="white"),
             ),
-            text=highlight["district_name"],
+            text=highlight[entity_name_col],
             textposition="top center",
             customdata=highlight[["enrollment", "x_display", "y_display"]].values,
             hovertemplate=(
