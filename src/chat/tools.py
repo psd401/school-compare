@@ -482,7 +482,7 @@ def _convert_to_gemini_declaration(schema: dict) -> dict:
     return {
         "name": schema["name"],
         "description": schema["description"],
-        "parameters": schema["input_schema"],
+        "parameters_json_schema": schema["input_schema"],
     }
 
 
