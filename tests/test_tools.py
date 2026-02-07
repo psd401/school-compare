@@ -56,14 +56,14 @@ class TestGeminiToolConversion:
 
     def test_converted_declaration_has_parameters(self):
         converted = _convert_to_gemini_declaration(TOOL_SCHEMAS[0])
-        assert "parameters" in converted
-        assert converted["parameters"]["type"] == "object"
+        assert "parameters_json_schema" in converted
+        assert converted["parameters_json_schema"]["type"] == "object"
 
     def test_enum_preserved(self):
         # get_assessment_data has enum for organization_type
         schema = next(s for s in TOOL_SCHEMAS if s["name"] == "get_assessment_data")
         converted = _convert_to_gemini_declaration(schema)
-        org_type = converted["parameters"]["properties"]["organization_type"]
+        org_type = converted["parameters_json_schema"]["properties"]["organization_type"]
         assert "enum" in org_type
         assert "School" in org_type["enum"]
         assert "District" in org_type["enum"]
