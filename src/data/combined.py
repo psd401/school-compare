@@ -163,7 +163,7 @@ def _load_assessment_data() -> pd.DataFrame:
     results = client.get(
         DATASET_IDS["assessment_2024_25"],
         where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
-        select="districtcode, testsubject, percentlevel3, percentlevel4",
+        select="districtcode, county, esdname, testsubject, percentlevel3, percentlevel4",
         limit=5000,
     )
 
@@ -192,6 +192,8 @@ def _load_assessment_data() -> pd.DataFrame:
 
         rows.append({
             'district_code': district_code,
+            'county': row.get('county'),
+            'esdname': row.get('esdname'),
             'subject': subject,
             'proficiency': proficiency,
         })
@@ -203,7 +205,7 @@ def _load_assessment_data() -> pd.DataFrame:
         return pd.DataFrame()
 
     pivot = df.pivot_table(
-        index='district_code',
+        index=['district_code', 'county', 'esdname'],
         columns='subject',
         values='proficiency',
         aggfunc='first'
@@ -329,7 +331,7 @@ def _load_school_assessment_data() -> pd.DataFrame:
     results = client.get(
         DATASET_IDS["assessment_2024_25"],
         where="organizationlevel='School' AND schoolyear='2024-25' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
-        select="districtcode, districtname, schoolcode, schoolname, testsubject, percentlevel3, percentlevel4",
+        select="districtcode, districtname, schoolcode, schoolname, county, esdname, testsubject, percentlevel3, percentlevel4",
         limit=50000,
     )
 
@@ -356,6 +358,8 @@ def _load_school_assessment_data() -> pd.DataFrame:
             'school_name': row.get('schoolname'),
             'district_code': row.get('districtcode'),
             'district_name': row.get('districtname'),
+            'county': row.get('county'),
+            'esdname': row.get('esdname'),
             'subject': row.get('testsubject'),
             'proficiency': proficiency,
         })
@@ -365,7 +369,7 @@ def _load_school_assessment_data() -> pd.DataFrame:
         return pd.DataFrame()
 
     pivot = df.pivot_table(
-        index=['school_code', 'school_name', 'district_code', 'district_name'],
+        index=['school_code', 'school_name', 'district_code', 'district_name', 'county', 'esdname'],
         columns='subject',
         values='proficiency',
         aggfunc='first'
