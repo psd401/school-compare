@@ -302,14 +302,14 @@ def create_trend_chart(
 
 def create_graduation_chart(
     data: dict[str, list[GraduationData]],
-    cohort: str = "Four-Year",
+    cohort: str = "Four Year",
 ) -> go.Figure:
     """
     Create bar chart comparing graduation rates.
 
     Args:
         data: Dict mapping organization name to list of GraduationData
-        cohort: "Four-Year" or "Five-Year" cohort
+        cohort: "Four Year" or "Five Year" cohort
     """
     rows = []
     for org_name, graduation in data.items():

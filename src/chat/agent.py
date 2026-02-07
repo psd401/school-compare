@@ -75,12 +75,7 @@ class ChatAgent:
                     name=tool_name,
                     response={"result": tool_result},
                 )
-                response = chat.send_message(
-                    message=types.Content(
-                        role="user",
-                        parts=[function_response],
-                    )
-                )
+                response = chat.send_message(message=function_response)
             else:
                 # No function call - yield text and exit
                 if response.text:
