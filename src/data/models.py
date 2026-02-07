@@ -99,7 +99,7 @@ class GraduationData:
     organization_name: str
     school_year: str
     student_group: str
-    cohort: str  # "Four-Year" or "Five-Year"
+    cohort: str  # "Four Year" or "Five Year"
     graduation_rate: Optional[float] = None
     is_suppressed: bool = False
 

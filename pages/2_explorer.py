@@ -155,7 +155,7 @@ def main():
         # Find graduation rate
         grad_rate = None
         for g in graduation_data:
-            if g.cohort == "Four-Year" and g.student_group == "All Students":
+            if g.cohort == "Four Year" and g.student_group == "All Students":
                 grad_rate = g.graduation_rate
                 break
         if grad_rate is not None:

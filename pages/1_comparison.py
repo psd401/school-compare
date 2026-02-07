@@ -234,7 +234,7 @@ def main():
 
         cohort = st.radio(
             "Cohort:",
-            options=["Four-Year", "Five-Year"],
+            options=["Four Year", "Five Year"],
             horizontal=True,
             key="grad_cohort",
         )

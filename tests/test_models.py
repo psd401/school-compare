@@ -151,7 +151,7 @@ class TestGraduationData:
             organization_name="Seattle SD",
             school_year="2023-24",
             student_group="All Students",
-            cohort="Four-Year",
+            cohort="Four Year",
             graduation_rate=85.5,
         )
         assert g.graduation_rate == 85.5

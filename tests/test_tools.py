@@ -255,7 +255,7 @@ class TestExecuteTool:
                 organization_name="Seattle SD",
                 school_year="2023-24",
                 student_group="All Students",
-                cohort="Four-Year",
+                cohort="Four Year",
                 graduation_rate=85.5,
             )
         ]
@@ -266,7 +266,7 @@ class TestExecuteTool:
             "organization_type": "District",
         })
         assert "85.5%" in result
-        assert "Four-Year" in result
+        assert "Four Year" in result
 
     @patch("src.chat.tools.get_client")
     def test_staffing_no_results(self, mock_get_client):
