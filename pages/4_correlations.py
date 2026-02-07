@@ -96,12 +96,61 @@ y_metric = st.sidebar.selectbox(
     index=metric_options.index(default_y) if default_y in metric_options else 1,
 )
 
-# Highlight filter
+# ---- Filters ----
+st.sidebar.header("Filters")
+
+total_count = len(df)
+filtered_df = df.copy()
+
+# ESD filter
+esd_options = sorted(df["esdname"].dropna().unique().tolist()) if "esdname" in df.columns else []
+selected_esds = st.sidebar.multiselect("ESD", options=esd_options)
+if selected_esds:
+    filtered_df = filtered_df[filtered_df["esdname"].isin(selected_esds)]
+
+# County filter (cascaded from ESD selection)
+county_options = sorted(filtered_df["county"].dropna().unique().tolist()) if "county" in filtered_df.columns else []
+selected_counties = st.sidebar.multiselect("County", options=county_options)
+if selected_counties:
+    filtered_df = filtered_df[filtered_df["county"].isin(selected_counties)]
+
+# Enrollment filter
+if "enrollment" in filtered_df.columns:
+    enroll_min = int(df["enrollment"].min(skipna=True)) if df["enrollment"].notna().any() else 0
+    enroll_max = int(df["enrollment"].max(skipna=True)) if df["enrollment"].notna().any() else 0
+    col_min, col_max = st.sidebar.columns(2)
+    with col_min:
+        enrollment_lo = st.number_input("Enrollment min", min_value=enroll_min, max_value=enroll_max, value=enroll_min)
+    with col_max:
+        enrollment_hi = st.number_input("Enrollment max", min_value=enroll_min, max_value=enroll_max, value=enroll_max)
+    filtered_df = filtered_df[
+        ((filtered_df["enrollment"] >= enrollment_lo) & (filtered_df["enrollment"] <= enrollment_hi))
+        | filtered_df["enrollment"].isna()
+    ]
+
+# District filter (school view only)
+if is_school:
+    dist_opts = (
+        filtered_df[["district_code", "district_name"]]
+        .drop_duplicates()
+        .sort_values("district_name")
+    )
+    dist_codes = dist_opts["district_code"].tolist()
+    dist_names = dict(zip(dist_opts["district_code"], dist_opts["district_name"]))
+    selected_districts = st.sidebar.multiselect(
+        "District",
+        options=dist_codes,
+        format_func=lambda x: dist_names.get(x, x),
+    )
+    if selected_districts:
+        filtered_df = filtered_df[filtered_df["district_code"].isin(selected_districts)]
+
+# ---- Highlight ----
 st.sidebar.header(f"Highlight {analysis_level}s")
 
 if is_school:
     # For school view: highlight by district
-    districts = df[["district_code", "district_name"]].drop_duplicates().sort_values("district_name")
+    districts = filtered_df[["district_code", "district_name"]].drop_duplicates().sort_values("district_name")
     district_options = districts["district_code"].tolist()
     district_names = dict(zip(districts["district_code"], districts["district_name"]))
 
@@ -113,14 +162,14 @@ if is_school:
 
     # Schools in the selected district become highlighted
     if highlight_district:
-        highlight_codes = df.loc[
-            df["district_code"] == highlight_district, "school_code"
+        highlight_codes = filtered_df.loc[
+            filtered_df["district_code"] == highlight_district, "school_code"
         ].tolist()
     else:
         highlight_codes = None
 else:
     # For district view: multi-select districts
-    districts = df[["district_code", "district_name"]].drop_duplicates().sort_values("district_name")
+    districts = filtered_df[["district_code", "district_name"]].drop_duplicates().sort_values("district_name")
     district_options = districts["district_code"].tolist()
     district_names = dict(zip(districts["district_code"], districts["district_name"]))
 
@@ -139,7 +188,7 @@ x_format = get_metric_format(x_metric)
 y_format = get_metric_format(y_metric)
 
 fig = create_correlation_scatter(
-    df=df,
+    df=filtered_df,
     x_metric=x_metric,
     y_metric=y_metric,
     x_label=x_label,
@@ -156,10 +205,14 @@ st.plotly_chart(fig, width="stretch")
 # Data summary
 col1, col2, col3 = st.columns(3)
 
-valid_data = df[[x_metric, y_metric]].dropna()
+valid_data = filtered_df[[x_metric, y_metric]].dropna()
+
+filtered_count = len(valid_data)
+is_filtered = filtered_count < total_count
+count_label = f"{filtered_count} / {total_count}" if is_filtered else str(filtered_count)
 
 with col1:
-    st.metric(f"{analysis_level}s with Data", len(valid_data))
+    st.metric(f"{analysis_level}s with Data", count_label)
 
 with col2:
     if not valid_data.empty:
