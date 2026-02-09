@@ -76,6 +76,37 @@ streamlit run app.py
 pytest tests/ -v
 ```
 
+## Deployment
+
+### Streamlit Cloud
+
+1. Fork this repository to your GitHub account
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub
+3. Click "New app" and select your forked repo
+4. Set the main file path to `app.py`
+5. Under "Advanced settings", add your secrets:
+
+```toml
+SOCRATA_APP_TOKEN = "your_token_here"
+GOOGLE_API_KEY = "your_key_here"
+```
+
+- `GOOGLE_API_KEY` is optional — the chat page gracefully degrades if not set
+- `SOCRATA_APP_TOKEN` is optional — the app works without it, but API requests are rate-limited
+
+See `.streamlit/secrets.toml.example` for the template.
+
+## Troubleshooting
+
+- **Wrong Python version**: Ensure `python --version` shows 3.11+. If not, install via `brew install python@3.11` or [pyenv](https://github.com/pyenv/pyenv), then recreate your venv: `python3.11 -m venv .venv`
+- **API rate limits / timeout errors**: Register for a free [Socrata app token](https://data.wa.gov/profile/edit/developer_settings) and add it to your `.env`
+- **Chat not working**: Verify `GOOGLE_API_KEY` is set in `.env` or Streamlit secrets. The chat page will show an error message if the key is missing.
+- **Stale data warnings on first load**: Cached dataset validation may show warnings on the initial page load. Refresh the page to clear them.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
 ## Project Structure
 
 ```
