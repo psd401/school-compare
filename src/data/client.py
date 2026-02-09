@@ -1,12 +1,18 @@
 """Socrata API client for OSPI data from data.wa.gov."""
 
+import logging
+import re
 from typing import Optional
+
 import pandas as pd
+import requests
 import streamlit as st
 from sodapy import Socrata
 
 from config.settings import get_settings, DATASET_IDS
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     School,
@@ -57,7 +63,27 @@ class OSPIClient:
         if order:
             kwargs["order"] = order
 
-        return self.client.get(dataset_id, **kwargs)
+        try:
+            return self.client.get(dataset_id, **kwargs)
+        except requests.exceptions.RequestException as e:
+            logger.error("Socrata API network error for dataset %s: %s", dataset_id, e)
+            return []
+        except Exception as e:
+            logger.error("Socrata API error for dataset %s: %s", dataset_id, e)
+            return []
+
+    @st.cache_data(ttl=86400, show_spinner=False)
+    def validate_datasets(_self) -> dict[str, bool]:
+        """Test each dataset ID with a minimal query. Returns {name: is_valid}."""
+        results = {}
+        for name, dataset_id in DATASET_IDS.items():
+            try:
+                _self.client.get(dataset_id, limit=1)
+                results[name] = True
+            except Exception as e:
+                logger.warning("Dataset '%s' (%s) validation failed: %s", name, dataset_id, e)
+                results[name] = False
+        return results
 
     # -------------------------------------------------------------------------
     # Directory/Search Methods
@@ -120,6 +146,46 @@ class OSPIClient:
                     )
                 )
         return districts
+
+    @st.cache_data(ttl=86400, show_spinner=False)
+    def get_district_by_code(_self, district_code: str) -> Optional[District]:
+        """Look up a single district by its code."""
+        results = _self._query(
+            DATASET_IDS["assessment_2024_25"],
+            select="DISTINCT districtcode, districtname, county, esdname",
+            where=f"districtcode='{district_code}' AND organizationlevel='District'",
+            limit=1,
+        )
+        if results:
+            r = results[0]
+            return District(
+                district_code=r.get("districtcode", ""),
+                district_name=r.get("districtname", ""),
+                county=r.get("county", ""),
+                esd_name=r.get("esdname", ""),
+            )
+        return None
+
+    @st.cache_data(ttl=86400, show_spinner=False)
+    def get_school_by_code(_self, school_code: str) -> Optional[School]:
+        """Look up a single school by its code."""
+        results = _self._query(
+            DATASET_IDS["assessment_2024_25"],
+            select="DISTINCT schoolcode, schoolname, districtcode, districtname, county, esdname",
+            where=f"schoolcode='{school_code}' AND organizationlevel='School'",
+            limit=1,
+        )
+        if results:
+            r = results[0]
+            return School(
+                school_code=r.get("schoolcode", ""),
+                school_name=r.get("schoolname", ""),
+                district_code=r.get("districtcode", ""),
+                district_name=r.get("districtname", ""),
+                county=r.get("county", ""),
+                esd_name=r.get("esdname", ""),
+            )
+        return None
 
     @st.cache_data(ttl=86400, show_spinner=False)
     def get_all_districts(_self) -> list[District]:
@@ -342,7 +408,7 @@ class OSPIClient:
 
         r = results[0]
         org_name = r.get("districtname") or r.get("schoolname", "")
-        total = _safe_int(r.get("all_students")) or 1  # Avoid division by zero
+        total = _safe_int(r.get("all_students"))
 
         # Race/Ethnicity mapping
         race_fields = {
@@ -366,7 +432,7 @@ class OSPIClient:
                         student_group=group_name,
                         student_group_type="Race/Ethnicity",
                         headcount=count,
-                        percent_of_total=(count / total * 100) if total > 0 else None,
+                        percent_of_total=(count / total * 100) if total else None,
                         is_suppressed=False,
                     )
                 )
@@ -392,7 +458,7 @@ class OSPIClient:
                         student_group=group_name,
                         student_group_type="Program",
                         headcount=count,
-                        percent_of_total=(count / total * 100) if total > 0 else None,
+                        percent_of_total=(count / total * 100) if total else None,
                         is_suppressed=False,
                     )
                 )
@@ -415,7 +481,7 @@ class OSPIClient:
                         student_group=group_name,
                         student_group_type="Gender",
                         headcount=count,
-                        percent_of_total=(count / total * 100) if total > 0 else None,
+                        percent_of_total=(count / total * 100) if total else None,
                         is_suppressed=False,
                     )
                 )
@@ -565,6 +631,7 @@ class OSPIClient:
         School year format: "24-25" (not "2024-25")
         """
         if not F196_DATA_PATH.exists():
+            logger.warning("F-196 data file not found: %s", F196_DATA_PATH)
             return None
 
         df = pd.read_csv(F196_DATA_PATH)
@@ -572,6 +639,7 @@ class OSPIClient:
         # Find the district row
         row = df[df['district_code'].astype(str) == str(district_code)]
         if row.empty:
+            logger.warning("No F-196 spending data for district %s", district_code)
             return None
 
         row = row.iloc[0]
@@ -582,6 +650,7 @@ class OSPIClient:
         expenditure_col = f'expenditure_{school_year}'
 
         if per_pupil_col not in row.index:
+            logger.warning("F-196 column %s not found for district %s", per_pupil_col, district_code)
             return None
 
         per_pupil = row.get(per_pupil_col)
@@ -611,18 +680,22 @@ class OSPIClient:
         Returns dict mapping school year to per-pupil expenditure.
         """
         if not F196_DATA_PATH.exists():
+            logger.warning("F-196 data file not found: %s", F196_DATA_PATH)
             return {}
 
         df = pd.read_csv(F196_DATA_PATH)
 
         row = df[df['district_code'].astype(str) == str(district_code)]
         if row.empty:
+            logger.warning("No F-196 trend data for district %s", district_code)
             return {}
 
         row = row.iloc[0]
         trend = {}
 
-        years = ['14-15', '15-16', '16-17', '17-18', '18-19', '19-20', '20-21', '21-22', '22-23', '23-24', '24-25']
+        # Dynamically detect available year columns from CSV headers
+        year_pattern = re.compile(r'^per_pupil_(\d{2}-\d{2})$')
+        years = sorted(m.group(1) for col in df.columns if (m := year_pattern.match(col)))
         for year in years:
             col = f'per_pupil_{year}'
             if col in row.index and pd.notna(row[col]):
@@ -644,6 +717,7 @@ class OSPIClient:
         Returns list of SpendingCategory with category name, amount, and percent.
         """
         if not F196_CATEGORIES_PATH.exists():
+            logger.warning("F-196 categories file not found: %s", F196_CATEGORIES_PATH)
             return []
 
         df = pd.read_csv(F196_CATEGORIES_PATH)

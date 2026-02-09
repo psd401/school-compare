@@ -5,7 +5,14 @@ Compare Washington state schools and districts across demographics,
 achievement, staffing, and spending metrics.
 """
 
+import logging
+
 import streamlit as st
+
+from config.settings import DATASET_IDS
+from src.data.client import get_client
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="WA School Compare",
@@ -15,7 +22,52 @@ st.set_page_config(
 )
 
 
+@st.cache_data(ttl=86400, show_spinner=False)
+def _get_homepage_stats():
+    """Fetch live counts for homepage display, with hardcoded fallbacks."""
+    try:
+        client = get_client()
+        districts = client._query(
+            DATASET_IDS["enrollment"],
+            select="COUNT(DISTINCT districtcode) as cnt",
+            where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades'",
+            limit=1,
+        )
+        district_count = int(districts[0]["cnt"]) if districts else 295
+
+        schools = client._query(
+            DATASET_IDS["enrollment"],
+            select="COUNT(DISTINCT schoolcode) as cnt",
+            where="organizationlevel='School' AND schoolyear='2024-25' AND gradelevel='All Grades'",
+            limit=1,
+        )
+        school_count = int(schools[0]["cnt"]) if schools else 2400
+
+        enrollment = client._query(
+            DATASET_IDS["enrollment"],
+            select="SUM(all_students) as total",
+            where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades'",
+            limit=1,
+        )
+        total_students = int(float(enrollment[0]["total"])) if enrollment else 1100000
+
+        return district_count, school_count, total_students
+    except Exception as e:
+        logger.warning("Failed to fetch homepage stats, using fallbacks: %s", e)
+        return 295, 2400, 1100000
+
+
 def main():
+    # Dataset validation — cached 24h, shows sidebar warning if any fail
+    try:
+        client = get_client()
+        dataset_status = client.validate_datasets()
+        invalid = [name for name, valid in dataset_status.items() if not valid]
+        if invalid:
+            st.sidebar.warning(f"Data sources unavailable: {', '.join(invalid)}. Some features may not work.")
+    except Exception as e:
+        logger.warning("Dataset validation failed: %s", e)
+
     st.title("Washington School Comparison Tool")
 
     st.markdown(
@@ -43,18 +95,19 @@ def main():
     )
 
     # Quick stats in columns
+    district_count, school_count, total_students = _get_homepage_stats()
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric(label="Districts", value="295")
+        st.metric(label="Districts", value=f"{district_count:,}")
         st.caption("Public school districts")
 
     with col2:
-        st.metric(label="Schools", value="2,400+")
+        st.metric(label="Schools", value=f"{school_count:,}")
         st.caption("Public schools")
 
     with col3:
-        st.metric(label="Students", value="1.1M+")
+        st.metric(label="Students", value=f"{total_students / 1_000_000:.1f}M+")
         st.caption("K-12 enrollment")
 
     st.markdown("---")

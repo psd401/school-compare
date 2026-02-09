@@ -1,11 +1,16 @@
 """Combined district data for correlation analysis."""
 
+import logging
+import re
+
 import pandas as pd
 import streamlit as st
 from sodapy import Socrata
 
 from config.settings import get_settings, DATASET_IDS
 from .client import F196_DATA_PATH
+
+logger = logging.getLogger(__name__)
 
 
 # Metrics available at school level (excludes spending and graduation which are district-only)
@@ -133,6 +138,23 @@ def _get_socrata_client() -> Socrata:
     return Socrata(settings.SOCRATA_DOMAIN, settings.SOCRATA_APP_TOKEN or None)
 
 
+def _paginated_get(client, dataset_id, batch_size=10000, max_total=100000, **kwargs):
+    """Execute a paginated Socrata query, fetching all results up to max_total."""
+    all_results = []
+    offset = 0
+    while offset < max_total:
+        try:
+            batch = client.get(dataset_id, limit=batch_size, offset=offset, **kwargs)
+        except Exception as e:
+            logger.error("Paginated query error for dataset %s at offset %d: %s", dataset_id, offset, e)
+            break
+        all_results.extend(batch)
+        if len(batch) < batch_size:
+            break
+        offset += batch_size
+    return all_results
+
+
 @st.cache_data(ttl=86400, show_spinner="Loading spending data...")
 def _load_spending_data() -> pd.DataFrame:
     """Load spending data from F-196 CSV."""
@@ -140,14 +162,22 @@ def _load_spending_data() -> pd.DataFrame:
         return pd.DataFrame()
 
     df = pd.read_csv(F196_DATA_PATH)
-    # Select only current year columns
-    cols = ['district_code', 'district_name', 'per_pupil_24-25', 'enrollment_24-25']
+
+    # Dynamically detect the latest year from column headers
+    year_pattern = re.compile(r'^per_pupil_(\d{2}-\d{2})$')
+    years = sorted(m.group(1) for col in df.columns if (m := year_pattern.match(col)))
+    if not years:
+        logger.warning("No per_pupil year columns found in F-196 CSV")
+        return pd.DataFrame()
+    latest_year = years[-1]
+
+    cols = ['district_code', 'district_name', f'per_pupil_{latest_year}', f'enrollment_{latest_year}']
     available = [c for c in cols if c in df.columns]
     df = df[available].copy()
 
     df = df.rename(columns={
-        'per_pupil_24-25': 'per_pupil_expenditure',
-        'enrollment_24-25': 'enrollment',
+        f'per_pupil_{latest_year}': 'per_pupil_expenditure',
+        f'enrollment_{latest_year}': 'enrollment',
     })
     df['district_code'] = df['district_code'].astype(str)
     return df
@@ -160,12 +190,16 @@ def _load_assessment_data() -> pd.DataFrame:
 
     # Query all district-level assessment data for All Students, All Grades
     # Use 2024-25 dataset (most recent available assessment data)
-    results = client.get(
-        DATASET_IDS["assessment_2024_25"],
-        where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
-        select="districtcode, county, esdname, testsubject, percentlevel3, percentlevel4",
-        limit=5000,
-    )
+    try:
+        results = client.get(
+            DATASET_IDS["assessment_2024_25"],
+            where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
+            select="districtcode, county, esdname, testsubject, percentlevel3, percentlevel4",
+            limit=5000,
+        )
+    except Exception as e:
+        logger.error("Failed to load district assessment data: %s", e)
+        return pd.DataFrame()
 
     if not results:
         return pd.DataFrame()
@@ -226,21 +260,29 @@ def _load_graduation_data() -> pd.DataFrame:
     client = _get_socrata_client()
 
     # Try 2024-25 dataset first (most recent)
-    results = client.get(
-        DATASET_IDS.get("graduation_2024_25", "isxb-523t"),
-        where="organizationlevel='District' AND schoolyear='2024-25' AND studentgroup='All Students' AND cohort='Four Year'",
-        select="districtcode, graduationrate",
-        limit=500,
-    )
-
-    # Fall back to legacy dataset if 2024-25 has no data
-    if not results:
+    try:
         results = client.get(
-            DATASET_IDS["graduation"],
-            where="organizationlevel='District' AND schoolyear='2023-24' AND studentgroup='All Students' AND cohort='Four Year'",
+            DATASET_IDS.get("graduation_2024_25", "isxb-523t"),
+            where="organizationlevel='District' AND schoolyear='2024-25' AND studentgroup='All Students' AND cohort='Four Year'",
             select="districtcode, graduationrate",
             limit=500,
         )
+    except Exception as e:
+        logger.error("Failed to load graduation data (2024-25): %s", e)
+        results = []
+
+    # Fall back to legacy dataset if 2024-25 has no data
+    if not results:
+        try:
+            results = client.get(
+                DATASET_IDS["graduation"],
+                where="organizationlevel='District' AND schoolyear='2023-24' AND studentgroup='All Students' AND cohort='Four Year'",
+                select="districtcode, graduationrate",
+                limit=500,
+            )
+        except Exception as e:
+            logger.error("Failed to load graduation data (2023-24 fallback): %s", e)
+            return pd.DataFrame()
 
     if not results:
         return pd.DataFrame()
@@ -260,12 +302,16 @@ def _load_demographics_data() -> pd.DataFrame:
     """Load all district demographics data in one query."""
     client = _get_socrata_client()
 
-    results = client.get(
-        DATASET_IDS["enrollment"],
-        where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades'",
-        select="districtcode, all_students, low_income, english_language_learners, students_with_disabilities",
-        limit=500,
-    )
+    try:
+        results = client.get(
+            DATASET_IDS["enrollment"],
+            where="organizationlevel='District' AND schoolyear='2024-25' AND gradelevel='All Grades'",
+            select="districtcode, all_students, low_income, english_language_learners, students_with_disabilities",
+            limit=500,
+        )
+    except Exception as e:
+        logger.error("Failed to load district demographics data: %s", e)
+        return pd.DataFrame()
 
     if not results:
         return pd.DataFrame()
@@ -290,12 +336,16 @@ def _load_staffing_data() -> pd.DataFrame:
     """Load all district staffing data in one query."""
     client = _get_socrata_client()
 
-    results = client.get(
-        DATASET_IDS["teachers"],
-        where="organizationlevel='LEA' AND schoolyear='2024-25' AND demographiccategory='All'",
-        select="leacode, avgyearsexperience, ma_percent, teachercount",
-        limit=500,
-    )
+    try:
+        results = client.get(
+            DATASET_IDS["teachers"],
+            where="organizationlevel='LEA' AND schoolyear='2024-25' AND demographiccategory='All'",
+            select="leacode, avgyearsexperience, ma_percent, teachercount",
+            limit=500,
+        )
+    except Exception as e:
+        logger.error("Failed to load district staffing data: %s", e)
+        return pd.DataFrame()
 
     if not results:
         return pd.DataFrame()
@@ -328,11 +378,11 @@ def _load_school_assessment_data() -> pd.DataFrame:
     """Load all school-level assessment data in one query."""
     client = _get_socrata_client()
 
-    results = client.get(
+    results = _paginated_get(
+        client,
         DATASET_IDS["assessment_2024_25"],
         where="organizationlevel='School' AND schoolyear='2024-25' AND gradelevel='All Grades' AND studentgroup='All Students' AND (testadministration='SBAC' OR testadministration='WCAS')",
         select="districtcode, districtname, schoolcode, schoolname, county, esdname, testsubject, percentlevel3, percentlevel4",
-        limit=50000,
     )
 
     if not results:
@@ -389,11 +439,11 @@ def _load_school_demographics_data() -> pd.DataFrame:
     """Load all school-level demographics data in one query."""
     client = _get_socrata_client()
 
-    results = client.get(
+    results = _paginated_get(
+        client,
         DATASET_IDS["enrollment"],
         where="organizationlevel='School' AND schoolyear='2024-25' AND gradelevel='All Grades'",
         select="schoolcode, all_students, low_income, english_language_learners, students_with_disabilities",
-        limit=50000,
     )
 
     if not results:
@@ -418,11 +468,11 @@ def _load_school_staffing_data() -> pd.DataFrame:
     """Load all school-level staffing data in one query."""
     client = _get_socrata_client()
 
-    results = client.get(
+    results = _paginated_get(
+        client,
         DATASET_IDS["teachers"],
         where="organizationlevel='School' AND schoolyear='2024-25' AND demographiccategory='All'",
         select="schoolcode, avgyearsexperience, ma_percent, teachercount",
-        limit=50000,
     )
 
     if not results:

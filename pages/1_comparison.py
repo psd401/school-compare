@@ -2,6 +2,7 @@
 Comparison Page - Compare schools/districts side-by-side.
 """
 
+import pandas as pd
 import streamlit as st
 
 from src.data.client import get_client
@@ -270,7 +271,14 @@ def main():
                         }
                     )
             if staff_rows:
-                st.dataframe(staff_rows, width="stretch")
+                staff_df = pd.DataFrame(staff_rows)
+                st.dataframe(staff_df, width="stretch")
+                st.download_button(
+                    "Download staffing data (CSV)",
+                    staff_df.to_csv(index=False),
+                    file_name=f"staffing_comparison_{school_year}.csv",
+                    mime="text/csv",
+                )
         else:
             st.warning("No staffing data available for the selected entities.")
 
@@ -309,7 +317,14 @@ def main():
                     }
                 )
             if spending_rows:
-                st.dataframe(spending_rows, width="stretch")
+                spending_df = pd.DataFrame(spending_rows)
+                st.dataframe(spending_df, width="stretch")
+                st.download_button(
+                    "Download spending data (CSV)",
+                    spending_df.to_csv(index=False),
+                    file_name=f"spending_comparison_{school_year}.csv",
+                    mime="text/csv",
+                )
 
             # Trend chart
             if spending_trends:

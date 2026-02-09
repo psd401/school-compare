@@ -59,3 +59,6 @@ data/cache/
 # Exception: F-196 spending data required by the app
 !data/f196/*.csv
 !data/f196/*.xlsx
+
+# Large raw F-196 data (not needed at runtime)
+data/f196/f196_2023-24_items.csv

@@ -202,6 +202,14 @@ fig = create_correlation_scatter(
 
 st.plotly_chart(fig, width="stretch")
 
+# CSV export
+st.download_button(
+    "Download filtered data (CSV)",
+    filtered_df.to_csv(index=False),
+    file_name=f"correlations_{analysis_level.lower()}_{x_metric}_vs_{y_metric}.csv",
+    mime="text/csv",
+)
+
 # Data summary
 col1, col2, col3 = st.columns(3)
 

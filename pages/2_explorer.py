@@ -28,14 +28,22 @@ def main():
 
     client = get_client()
 
+    # Read URL query params for deep-linking
+    params = st.query_params
+    url_type = params.get("type", None)
+    url_id = params.get("id", None)
+    url_year = params.get("year", None)
+
     # Entity selection in main area
     col1, col2 = st.columns([1, 2])
 
     with col1:
+        default_type_index = 1 if url_type == "School" else 0
         org_type = st.radio(
             "Organization Type:",
             options=["District", "School"],
             horizontal=True,
+            index=default_type_index,
         )
 
     with col2:
@@ -64,10 +72,20 @@ def main():
             selected_entity = options.get(selected_name)
         else:
             st.warning("No results found.")
+    elif url_id:
+        # Auto-load entity from URL params when no active search
+        if org_type == "District":
+            selected_entity = client.get_district_by_code(url_id)
+        else:
+            selected_entity = client.get_school_by_code(url_id)
 
     if not selected_entity:
         st.info("Search for a school or district above to explore its data.")
         return
+
+    # Update URL params for deep-linking
+    st.query_params["type"] = org_type
+    st.query_params["id"] = selected_entity.organization_id
 
     st.divider()
 
@@ -79,12 +97,18 @@ def main():
 
     # Year selector
     available_years = client.get_available_years()
+    if not available_years:
+        available_years = ["2023-24"]
+    default_year_index = 0
+    if url_year and url_year in available_years:
+        default_year_index = available_years.index(url_year)
     school_year = st.selectbox(
         "School Year:",
-        options=available_years if available_years else ["2023-24"],
-        index=0,
+        options=available_years,
+        index=default_year_index,
         key="explorer_year",
     )
+    st.query_params["year"] = school_year
 
     # Load all data
     org_id = selected_entity.organization_id
@@ -199,7 +223,14 @@ def main():
                 )
 
         if summary_data:
-            st.dataframe(summary_data, width="stretch")
+            summary_df = pd.DataFrame(summary_data)
+            st.dataframe(summary_df, width="stretch")
+            st.download_button(
+                "Download assessment data (CSV)",
+                summary_df.to_csv(index=False),
+                file_name=f"{selected_entity.display_name}_assessment_{school_year}.csv",
+                mime="text/csv",
+            )
             st.caption(add_suppression_footnote())
 
         # Score distribution chart
@@ -251,8 +282,14 @@ def main():
                     }
                 )
         if enrollment_rows:
-            df = pd.DataFrame(enrollment_rows)
-            st.dataframe(df, width="stretch")
+            enrollment_df = pd.DataFrame(enrollment_rows)
+            st.dataframe(enrollment_df, width="stretch")
+            st.download_button(
+                "Download enrollment data (CSV)",
+                enrollment_df.to_csv(index=False),
+                file_name=f"{selected_entity.display_name}_enrollment_{school_year}.csv",
+                mime="text/csv",
+            )
     else:
         st.info("No demographic data available.")
 
