@@ -28,6 +28,7 @@ class ChatAgent:
         self,
         user_message: str,
         conversation_history: list[dict],
+        context: str = "",
     ) -> Generator[str, None, None]:
         """
         Send a message and yield the response.
@@ -35,10 +36,22 @@ class ChatAgent:
         Args:
             user_message: The user's message
             conversation_history: Previous messages in the conversation
+            context: Optional session context string to append to system prompt
 
         Yields:
             Text chunks as they are generated
         """
+        # Use context-augmented config if context is provided
+        if context:
+            config = types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT + "\n\n" + context,
+                tools=[GEMINI_TOOLS],
+                temperature=self.config.temperature,
+                max_output_tokens=self.config.max_output_tokens,
+            )
+        else:
+            config = self.config
+
         # Convert conversation history to google.genai Content format
         genai_history = []
         for msg in conversation_history:
@@ -50,7 +63,7 @@ class ChatAgent:
         # Create chat session with history
         chat = self.client.chats.create(
             model=self.model_name,
-            config=self.config,
+            config=config,
             history=genai_history,
         )
 
@@ -86,6 +99,7 @@ class ChatAgent:
         self,
         user_message: str,
         conversation_history: list[dict],
+        context: str = "",
     ) -> str:
         """
         Get a complete response (non-streaming).
@@ -93,8 +107,9 @@ class ChatAgent:
         Args:
             user_message: The user's message
             conversation_history: Previous messages in the conversation
+            context: Optional session context string
 
         Returns:
             Complete response text
         """
-        return "".join(self.chat(user_message, conversation_history))
+        return "".join(self.chat(user_message, conversation_history, context=context))

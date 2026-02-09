@@ -29,6 +29,22 @@ class Settings:
     MAX_COMPARISON_ENTITIES: int = 5
     DEFAULT_YEAR: str = "2023-24"
 
+    # Assessment subgroup/grade options
+    STUDENT_GROUPS_CORE: list = [
+        "All Students", "Low-Income", "English Language Learners",
+        "Students with Disabilities", "White", "Hispanic/Latino of any race(s)",
+        "Black/African American", "Asian",
+    ]
+    STUDENT_GROUPS_EXTENDED: list = [
+        "American Indian/Alaskan Native", "Native Hawaiian/Other Pacific Islander",
+        "Two or More Races", "Female", "Male", "Migrant", "Section 504",
+        "Homeless", "Military Parent", "Foster Care",
+    ]
+    GRADE_LEVELS: list = [
+        "All Grades", "3rd Grade", "4th Grade", "5th Grade",
+        "6th Grade", "7th Grade", "8th Grade", "10th Grade", "11th Grade",
+    ]
+
     # LLM settings (Gemini)
     LLM_MODEL: str = "gemini-3-flash-preview"
     LLM_MAX_TOKENS: int = 4096

@@ -5,6 +5,7 @@ Explorer Page - Deep dive into a single school or district.
 import streamlit as st
 import pandas as pd
 
+from config.settings import get_settings
 from src.data.client import get_client
 from src.viz.charts import (
     create_score_distribution,
@@ -12,6 +13,7 @@ from src.viz.charts import (
     create_program_demographics_chart,
     create_spending_trend_chart,
     create_spending_breakdown_chart,
+    create_trend_chart,
     add_suppression_footnote,
 )
 
@@ -110,32 +112,56 @@ def main():
     )
     st.query_params["year"] = school_year
 
+    # Subgroup and grade level selectors for assessment data
+    settings = get_settings()
+    sub_col1, sub_col2, sub_col3 = st.columns([2, 2, 1])
+    with sub_col1:
+        show_all_groups = st.checkbox("Show all subgroups", value=False, key="explorer_show_all")
+        group_options = settings.STUDENT_GROUPS_CORE + (settings.STUDENT_GROUPS_EXTENDED if show_all_groups else [])
+        student_group = st.selectbox(
+            "Student Group:",
+            options=group_options,
+            index=0,
+            key="explorer_student_group",
+        )
+    with sub_col2:
+        grade_level = st.selectbox(
+            "Grade Level:",
+            options=settings.GRADE_LEVELS,
+            index=0,
+            key="explorer_grade_level",
+        )
+
     # Load all data
     org_id = selected_entity.organization_id
     org_level = org_type
     spending_year = school_year[2:]  # "2023-24" -> "23-24"
 
-    with st.spinner("Loading data..."):
+    with st.status(f"Loading {selected_entity.display_name} data...", expanded=True) as status:
+        st.write("Loading assessment data...")
         assessment_data = client.get_assessment_data(
             organization_id=org_id,
             organization_level=org_level,
             school_year=school_year,
-            student_group="All Students",
-            grade_level="All Grades",
+            student_group=student_group,
+            grade_level=grade_level,
         )
 
+        st.write("Loading demographics...")
         demographic_data = client.get_demographics(
             organization_id=org_id,
             organization_level=org_level,
             school_year=school_year,
         )
 
+        st.write("Loading graduation data...")
         graduation_data = client.get_graduation_data(
             organization_id=org_id,
             organization_level=org_level,
             school_year=school_year,
         )
 
+        st.write("Loading staffing data...")
         staffing_data = client.get_staffing_data(
             organization_id=org_id,
             organization_level=org_level,
@@ -146,11 +172,16 @@ def main():
         spending_data = None
         spending_trend = None
         if org_level == "District":
+            st.write("Loading spending data...")
             spending_data = client.get_spending_data(org_id, spending_year)
             spending_trend = client.get_spending_trend(org_id)
 
+        status.update(label="Data loaded!", state="complete", expanded=False)
+
     # Overview metrics in cards
-    st.subheader("Overview")
+    subgroup_label = f" ({student_group})" if student_group != "All Students" else ""
+    grade_label = f" — {grade_level}" if grade_level != "All Grades" else ""
+    st.subheader(f"Overview{subgroup_label}{grade_label}")
 
     metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
 
@@ -158,9 +189,9 @@ def main():
     ela_prof = None
     math_prof = None
     for a in assessment_data:
-        if a.test_subject == "ELA" and a.grade_level == "All Grades":
+        if a.test_subject == "ELA" and a.grade_level == grade_level:
             ela_prof = a.proficiency_rate
-        elif a.test_subject == "Math" and a.grade_level == "All Grades":
+        elif a.test_subject == "Math" and a.grade_level == grade_level:
             math_prof = a.proficiency_rate
 
     with metrics_col1:
@@ -208,7 +239,7 @@ def main():
         # Summary table
         summary_data = []
         for a in assessment_data:
-            if a.grade_level == "All Grades":
+            if a.grade_level == grade_level:
                 summary_data.append(
                     {
                         "Subject": a.test_subject,
@@ -245,6 +276,35 @@ def main():
             subject=subject,
         )
         st.plotly_chart(fig, width="stretch")
+        st.caption("*Hover over chart and click the camera icon to download as PNG*")
+
+        # Year-over-year trend
+        if st.toggle("Show Assessment Trend", key="explorer_assessment_trend"):
+            st.markdown("#### Assessment Proficiency Trend")
+            trend_years = available_years[:5]  # Last 5 years (already sorted desc)
+            trend_data = {}
+            for subj in ["ELA", "Math", "Science"]:
+                yearly_vals = {}
+                for yr in reversed(trend_years):  # chronological order
+                    yr_data = client.get_assessment_data(
+                        organization_id=org_id,
+                        organization_level=org_level,
+                        school_year=yr,
+                        test_subject=subj,
+                        student_group=student_group,
+                        grade_level=grade_level,
+                    )
+                    for a in yr_data:
+                        if a.proficiency_rate is not None:
+                            yearly_vals[yr] = a.proficiency_rate
+                if yearly_vals:
+                    trend_data[subj] = yearly_vals
+            if trend_data:
+                fig = create_trend_chart(trend_data, metric_name="% Meeting Standard")
+                st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
+            else:
+                st.info("No multi-year trend data available.")
     else:
         st.info("No assessment data available.")
 
@@ -261,12 +321,14 @@ def main():
                 group_type="Race/Ethnicity",
             )
             st.plotly_chart(fig, width="stretch")
+            st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
         with demo_col2:
             fig = create_program_demographics_chart(
                 {selected_entity.display_name: demographic_data}
             )
             st.plotly_chart(fig, width="stretch")
+            st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
         # Enrollment table
         st.markdown("#### Enrollment Details")
@@ -310,6 +372,30 @@ def main():
                 )
         if grad_rows:
             st.dataframe(grad_rows, width="stretch")
+
+            # Graduation trend
+            if st.toggle("Show Graduation Trend", key="explorer_grad_trend"):
+                st.markdown("#### Graduation Rate Trend")
+                trend_years = available_years[:5]
+                grad_trend = {"Four Year": {}, "Five Year": {}}
+                for yr in reversed(trend_years):
+                    yr_grad = client.get_graduation_data(
+                        organization_id=org_id,
+                        organization_level=org_level,
+                        school_year=yr,
+                    )
+                    for g in yr_grad:
+                        if g.student_group == "All Students" and g.graduation_rate is not None:
+                            if g.cohort in grad_trend:
+                                grad_trend[g.cohort][yr] = g.graduation_rate
+                # Remove empty cohorts
+                grad_trend = {k: v for k, v in grad_trend.items() if v}
+                if grad_trend:
+                    fig = create_trend_chart(grad_trend, metric_name="Graduation Rate (%)")
+                    st.plotly_chart(fig, width="stretch")
+                    st.caption("*Hover over chart and click the camera icon to download as PNG*")
+                else:
+                    st.info("No multi-year graduation data available.")
     else:
         st.info("No graduation data available.")
 
@@ -375,6 +461,7 @@ def main():
                 st.markdown("#### 10-Year Spending Trend")
                 fig = create_spending_trend_chart({selected_entity.display_name: spending_trend})
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
             # Spending category breakdown
             spending_categories = client.get_spending_by_category(org_id)
@@ -385,6 +472,7 @@ def main():
                     district_name=selected_entity.display_name,
                 )
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
             st.caption("Source: OSPI F-196 Financial Reporting Data")
         else:

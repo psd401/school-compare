@@ -6,11 +6,13 @@ achievement, staffing, and spending metrics.
 """
 
 import logging
+import threading
 
 import streamlit as st
 
 from config.settings import DATASET_IDS
 from src.data.client import get_client
+from src.data.combined import get_all_district_data, get_all_school_data
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,19 @@ def _get_homepage_stats():
 
 
 def main():
+    # Cache warming — trigger background data loading on first visit
+    if "cache_warmed" not in st.session_state:
+        st.session_state.cache_warmed = True
+
+        def _warm():
+            try:
+                get_all_district_data()
+                get_all_school_data()
+            except Exception as e:
+                logger.warning("Cache warming failed: %s", e)
+
+        threading.Thread(target=_warm, daemon=True).start()
+
     # Dataset validation — cached 24h, shows sidebar warning if any fail
     try:
         client = get_client()

@@ -7,6 +7,30 @@ import streamlit as st
 from config.settings import get_settings
 from src.chat.agent import ChatAgent
 
+
+def _build_page_context() -> str:
+    """Build context string from session state about what the user is viewing."""
+    parts = []
+
+    # Comparison page entities
+    entities = st.session_state.get("selected_entities", [])
+    if entities:
+        names = [e["name"] for e in entities]
+        parts.append(f"User is comparing: {', '.join(names)}")
+
+    # Explorer page entity from query params
+    params = st.query_params
+    url_type = params.get("type")
+    url_id = params.get("id")
+    url_year = params.get("year")
+    if url_id and url_type:
+        parts.append(f"User was viewing: {url_type} (code: {url_id}) for {url_year or 'unknown year'} on the Explorer page")
+
+    if not parts:
+        return ""
+
+    return "[SESSION CONTEXT]\n" + "\n".join(parts) + "\n[END CONTEXT]"
+
 st.set_page_config(
     page_title="Chat - WA School Compare",
     page_icon="💬",
@@ -79,9 +103,10 @@ def main():
                 for m in st.session_state.messages[:-1]  # Exclude current message
             ]
 
-            # Stream response
+            # Stream response with page context
+            page_context = _build_page_context()
             try:
-                for chunk in st.session_state.agent.chat(prompt, history):
+                for chunk in st.session_state.agent.chat(prompt, history, context=page_context):
                     full_response += chunk
                     message_placeholder.markdown(full_response + "▌")
 

@@ -764,6 +764,53 @@ def create_correlation_scatter(
     return fig
 
 
+def create_multi_entity_trend_chart(
+    data: dict[str, dict[str, float]],
+    metric_name: str = "Proficiency Rate",
+    subject: str = "",
+) -> go.Figure:
+    """
+    Create multi-entity line chart showing metric trends over time.
+
+    Args:
+        data: Dict mapping entity name to dict of year -> value
+        metric_name: Name of the metric being displayed
+        subject: Optional subject name for the title
+    """
+    if not data:
+        return _empty_chart("No trend data available")
+
+    fig = go.Figure()
+
+    for i, (entity_name, yearly_data) in enumerate(data.items()):
+        years = sorted(yearly_data.keys())
+        values = [yearly_data[y] for y in years]
+
+        fig.add_trace(
+            go.Scatter(
+                x=years,
+                y=values,
+                name=entity_name,
+                mode="lines+markers",
+                line=dict(color=ENTITY_COLORS[i % len(ENTITY_COLORS)]),
+                hovertemplate="%{x}<br>%{y:.1f}%<extra>%{fullData.name}</extra>",
+                connectgaps=False,  # Show gaps for missing years (e.g., COVID)
+            )
+        )
+
+    title = f"{subject} {metric_name} Trends" if subject else f"{metric_name} Trends"
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="School Year",
+        yaxis_title=metric_name,
+        legend_title="",
+        hovermode="x unified",
+    )
+
+    return fig
+
+
 def _empty_chart(message: str) -> go.Figure:
     """Create an empty chart with a message."""
     fig = go.Figure()

@@ -5,6 +5,7 @@ Comparison Page - Compare schools/districts side-by-side.
 import pandas as pd
 import streamlit as st
 
+from config.settings import get_settings
 from src.data.client import get_client
 from src.data.models import AssessmentData, DemographicData, GraduationData, StaffingData, SpendingData
 from src.viz.charts import (
@@ -16,6 +17,7 @@ from src.viz.charts import (
     create_staffing_chart,
     create_spending_chart,
     create_spending_trend_chart,
+    create_multi_entity_trend_chart,
     add_suppression_footnote,
 )
 
@@ -91,6 +93,10 @@ def main():
         # Show selected entities
         st.divider()
         st.subheader("Selected for Comparison")
+        selected_count = len(st.session_state.selected_entities)
+        st.caption(f"{selected_count}/5 selected")
+        if selected_count >= 5:
+            st.info("Comparing more than 5 entities makes charts hard to read. Remove one to add another.")
 
         if st.session_state.selected_entities:
             for i, entity in enumerate(st.session_state.selected_entities):
@@ -113,14 +119,31 @@ def main():
         st.info("👈 Use the sidebar to search and select schools or districts to compare.")
         return
 
-    # Year selector
-    col1, col2 = st.columns([1, 3])
-    with col1:
+    # Year and subgroup selectors
+    settings = get_settings()
+    ctrl_col1, ctrl_col2, ctrl_col3, ctrl_col4 = st.columns([1, 2, 2, 1])
+    with ctrl_col1:
         available_years = client.get_available_years()
         school_year = st.selectbox(
             "School Year:",
             options=available_years if available_years else ["2023-24"],
             index=0,
+        )
+    with ctrl_col2:
+        show_all_groups = st.checkbox("Show all subgroups", value=False, key="comp_show_all")
+        group_options = settings.STUDENT_GROUPS_CORE + (settings.STUDENT_GROUPS_EXTENDED if show_all_groups else [])
+        student_group = st.selectbox(
+            "Student Group:",
+            options=group_options,
+            index=0,
+            key="comp_student_group",
+        )
+    with ctrl_col3:
+        grade_level = st.selectbox(
+            "Grade Level:",
+            options=settings.GRADE_LEVELS,
+            index=0,
+            key="comp_grade_level",
         )
 
     # Convert school year format for spending data (2023-24 -> 23-24)
@@ -134,19 +157,20 @@ def main():
     spending_data: dict[str, SpendingData] = {}
     spending_trends: dict[str, dict[str, float]] = {}
 
-    with st.spinner("Loading data..."):
+    with st.status("Loading comparison data...", expanded=True) as status:
         for entity in st.session_state.selected_entities:
             org_level = entity["type"]
             org_id = entity["id"]
             name = entity["name"]
+            st.write(f"Loading {name}...")
 
             # Get assessment data
             assessment_data[name] = client.get_assessment_data(
                 organization_id=org_id,
                 organization_level=org_level,
                 school_year=school_year,
-                student_group="All Students",
-                grade_level="All Grades",
+                student_group=student_group,
+                grade_level=grade_level,
             )
 
             # Get demographic data
@@ -179,8 +203,10 @@ def main():
                 if trend:
                     spending_trends[name] = trend
 
+        status.update(label="Data loaded!", state="complete", expanded=False)
+
     # Create tabs for different metric categories
-    tabs = st.tabs(["Achievement", "Score Distribution", "Demographics", "Graduation", "Staffing", "Spending"])
+    tabs = st.tabs(["Achievement", "Score Distribution", "Demographics", "Graduation", "Staffing", "Spending", "Trends"])
 
     # Achievement Tab
     with tabs[0]:
@@ -189,6 +215,7 @@ def main():
         if any(assessment_data.values()):
             fig = create_achievement_comparison(assessment_data)
             st.plotly_chart(fig, width="stretch")
+            st.caption("*Hover over chart and click the camera icon to download as PNG*")
             st.caption(add_suppression_footnote())
         else:
             st.warning("No assessment data available for the selected entities.")
@@ -206,6 +233,7 @@ def main():
         if any(assessment_data.values()):
             fig = create_score_distribution(assessment_data, subject=subject)
             st.plotly_chart(fig, width="stretch")
+            st.caption("*Hover over chart and click the camera icon to download as PNG*")
         else:
             st.warning("No score distribution data available.")
 
@@ -219,6 +247,7 @@ def main():
             if any(demographic_data.values()):
                 fig = create_demographics_chart(demographic_data, group_type="Race/Ethnicity")
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
             else:
                 st.warning("No race/ethnicity data available.")
 
@@ -226,6 +255,7 @@ def main():
             if any(demographic_data.values()):
                 fig = create_program_demographics_chart(demographic_data)
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
             else:
                 st.warning("No program participation data available.")
 
@@ -243,6 +273,7 @@ def main():
         if any(graduation_data.values()):
             fig = create_graduation_chart(graduation_data, cohort=cohort)
             st.plotly_chart(fig, width="stretch")
+            st.caption("*Hover over chart and click the camera icon to download as PNG*")
             st.caption(add_suppression_footnote())
         else:
             st.warning("No graduation data available for the selected entities.")
@@ -254,6 +285,7 @@ def main():
         if any(staffing_data.values()):
             fig = create_staffing_chart(staffing_data)
             st.plotly_chart(fig, width="stretch")
+            st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
             # Also show raw data in table
             st.markdown("#### Staffing Details")
@@ -302,6 +334,7 @@ def main():
             if per_pupil_comparison:
                 fig = create_spending_chart(per_pupil_comparison)
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
             # Spending details table
             st.markdown("#### Spending Details")
@@ -331,6 +364,7 @@ def main():
                 st.markdown("#### 10-Year Spending Trends")
                 fig = create_spending_trend_chart(spending_trends)
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
             st.caption("Source: OSPI F-196 Financial Reporting Data")
         else:
@@ -338,6 +372,54 @@ def main():
                 st.warning("Select districts to view spending data.")
             else:
                 st.warning("No spending data available for the selected districts.")
+
+    # Trends Tab
+    with tabs[6]:
+        st.subheader("Year-Over-Year Trends")
+
+        trend_subject = st.selectbox(
+            "Subject:",
+            options=["ELA", "Math", "Science"],
+            key="trend_subject",
+        )
+
+        trend_years = available_years[:5]  # Last 5 years, already desc
+        if len(trend_years) < 2:
+            st.warning("Need at least 2 years of data for trend analysis.")
+        else:
+            trend_data = {}
+            with st.status("Loading trend data...", expanded=True) as trend_status:
+                for entity in st.session_state.selected_entities:
+                    name = entity["name"]
+                    st.write(f"Loading {name}...")
+                    yearly_vals = {}
+                    for yr in reversed(trend_years):
+                        yr_assessment = client.get_assessment_data(
+                            organization_id=entity["id"],
+                            organization_level=entity["type"],
+                            school_year=yr,
+                            test_subject=trend_subject,
+                            student_group=student_group,
+                            grade_level=grade_level,
+                        )
+                        for a in yr_assessment:
+                            if a.proficiency_rate is not None:
+                                yearly_vals[yr] = a.proficiency_rate
+                    if yearly_vals:
+                        trend_data[name] = yearly_vals
+                trend_status.update(label="Trend data loaded!", state="complete", expanded=False)
+
+            if trend_data:
+                fig = create_multi_entity_trend_chart(
+                    trend_data,
+                    metric_name="% Meeting Standard",
+                    subject=trend_subject,
+                )
+                st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
+                st.caption(add_suppression_footnote())
+            else:
+                st.warning(f"No multi-year {trend_subject} data available for the selected entities.")
 
 
 if __name__ == "__main__":

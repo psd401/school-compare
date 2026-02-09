@@ -39,13 +39,15 @@ active_metrics = SCHOOL_METRICS if is_school else METRICS
 
 # Load data based on level
 if is_school:
-    with st.spinner("Loading school data..."):
+    with st.status("Loading school data...", expanded=True) as status:
         df = get_all_school_data()
+        status.update(label="School data loaded!", state="complete", expanded=False)
     entity_name_col = "school_name"
     entity_code_col = "school_code"
 else:
-    with st.spinner("Loading district data..."):
+    with st.status("Loading district data...", expanded=True) as status:
         df = get_all_district_data()
+        status.update(label="District data loaded!", state="complete", expanded=False)
     entity_name_col = "district_name"
     entity_code_col = "district_code"
 
@@ -77,6 +79,18 @@ metric_options = get_metric_options()
 default_x = "per_pupil_expenditure" if not is_school else "pct_low_income"
 default_y = "ela_proficiency"
 
+# Initialize session state for metric selection (used by suggested analysis buttons)
+if "x_metric" not in st.session_state:
+    st.session_state.x_metric = default_x
+if "y_metric" not in st.session_state:
+    st.session_state.y_metric = default_y
+
+# Ensure session state values are valid for current metric options
+if st.session_state.x_metric not in metric_options:
+    st.session_state.x_metric = metric_options[0]
+if st.session_state.y_metric not in metric_options:
+    st.session_state.y_metric = metric_options[1] if len(metric_options) > 1 else metric_options[0]
+
 # Sidebar controls
 st.sidebar.header("Chart Configuration")
 
@@ -85,7 +99,7 @@ x_metric = st.sidebar.selectbox(
     "X-Axis Metric",
     options=metric_options,
     format_func=get_metric_label,
-    index=metric_options.index(default_x) if default_x in metric_options else 0,
+    key="x_metric",
 )
 
 # Y-axis metric
@@ -93,7 +107,7 @@ y_metric = st.sidebar.selectbox(
     "Y-Axis Metric",
     options=metric_options,
     format_func=get_metric_label,
-    index=metric_options.index(default_y) if default_y in metric_options else 1,
+    key="y_metric",
 )
 
 # ---- Filters ----
@@ -201,6 +215,7 @@ fig = create_correlation_scatter(
 )
 
 st.plotly_chart(fig, width="stretch")
+st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
 # CSV export
 st.download_button(
@@ -251,6 +266,28 @@ with st.expander("Understanding the Chart"):
 
     **Note:** Correlation does not imply causation. Many factors influence educational outcomes.
     """)
+
+# Suggested analyses
+st.markdown("#### Suggested Analyses")
+st.caption("Click a button to load a pre-configured metric pairing.")
+
+SUGGESTED_ANALYSES = [
+    ("per_pupil_expenditure", "ela_proficiency", "Spending vs ELA", "Resource impact on achievement"),
+    ("pct_low_income", "math_proficiency", "Poverty vs Math", "Poverty/achievement relationship"),
+    ("teacher_experience", "ela_proficiency", "Experience vs ELA", "Staff quality impact"),
+    ("pct_ell", "science_proficiency", "ELL vs Science", "Language barrier effects"),
+    ("student_teacher_ratio", "math_proficiency", "Class Size vs Math", "Class size impact"),
+]
+
+suggestion_cols = st.columns(len(SUGGESTED_ANALYSES))
+for idx, (sx, sy, label, rationale) in enumerate(SUGGESTED_ANALYSES):
+    with suggestion_cols[idx]:
+        # Only show if both metrics are available at current analysis level
+        if sx in metric_options and sy in metric_options:
+            if st.button(label, key=f"suggest_{idx}", help=rationale):
+                st.session_state.x_metric = sx
+                st.session_state.y_metric = sy
+                st.rerun()
 
 # Data source note
 if is_school:

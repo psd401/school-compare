@@ -2,6 +2,7 @@
 
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import streamlit as st
@@ -495,17 +496,23 @@ def _load_school_staffing_data() -> pd.DataFrame:
     return df[['school_code', 'teacher_experience', 'pct_teachers_masters', 'teacher_count']]
 
 
-@st.cache_data(ttl=86400, show_spinner="Combining school data...")
+@st.cache_data(ttl=86400, show_spinner=False)
 def get_all_school_data() -> pd.DataFrame:
     """
     Load and combine all school-level data into a single DataFrame.
 
     Excludes spending (district-only) and graduation (district-only).
+    Runs loaders in parallel via ThreadPoolExecutor for faster cold-cache loads.
     Returns DataFrame with columns for each metric plus school/district info.
     """
-    assessment = _load_school_assessment_data()
-    demographics = _load_school_demographics_data()
-    staffing = _load_school_staffing_data()
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        assessment_future = executor.submit(_load_school_assessment_data)
+        demographics_future = executor.submit(_load_school_demographics_data)
+        staffing_future = executor.submit(_load_school_staffing_data)
+
+    assessment = assessment_future.result()
+    demographics = demographics_future.result()
+    staffing = staffing_future.result()
 
     if assessment.empty:
         return pd.DataFrame()
@@ -540,20 +547,28 @@ def get_all_school_data() -> pd.DataFrame:
 # District-Level Combined Data
 # -------------------------------------------------------------------------
 
-@st.cache_data(ttl=86400, show_spinner="Combining district data...")
+@st.cache_data(ttl=86400, show_spinner=False)
 def get_all_district_data() -> pd.DataFrame:
     """
     Load and combine all district-level data into a single DataFrame.
 
     Uses batch queries (5 total API calls) instead of per-district queries.
+    Runs loaders in parallel via ThreadPoolExecutor for faster cold-cache loads.
     Returns DataFrame with columns for each metric plus district info.
     """
-    # Load each data source
-    spending = _load_spending_data()
-    assessment = _load_assessment_data()
-    graduation = _load_graduation_data()
-    demographics = _load_demographics_data()
-    staffing = _load_staffing_data()
+    # Load each data source in parallel
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        spending_future = executor.submit(_load_spending_data)
+        assessment_future = executor.submit(_load_assessment_data)
+        graduation_future = executor.submit(_load_graduation_data)
+        demographics_future = executor.submit(_load_demographics_data)
+        staffing_future = executor.submit(_load_staffing_data)
+
+    spending = spending_future.result()
+    assessment = assessment_future.result()
+    graduation = graduation_future.result()
+    demographics = demographics_future.result()
+    staffing = staffing_future.result()
 
     if spending.empty:
         return pd.DataFrame()

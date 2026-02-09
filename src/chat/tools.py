@@ -60,6 +60,16 @@ TOOL_SCHEMAS = [
                     "enum": ["ELA", "Math", "Science"],
                     "description": "Test subject to get data for. If not specified, returns all subjects.",
                 },
+                "student_group": {
+                    "type": "string",
+                    "description": "Student subgroup (e.g., 'All Students', 'Low-Income', 'English Language Learners', 'Students with Disabilities', 'Hispanic/Latino of any race(s)', 'Black/African American', 'Asian', 'White'). Defaults to 'All Students'.",
+                    "default": "All Students",
+                },
+                "grade_level": {
+                    "type": "string",
+                    "description": "Grade level (e.g., 'All Grades', '3rd Grade', '4th Grade', '5th Grade', '6th Grade', '7th Grade', '8th Grade', '10th Grade', '11th Grade'). Defaults to 'All Grades'.",
+                    "default": "All Grades",
+                },
             },
             "required": ["organization_id", "organization_type"],
         },
@@ -244,14 +254,16 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
         org_type = tool_input["organization_type"]
         year = tool_input.get("school_year", "2023-24")
         subject = tool_input.get("subject")
+        student_group = tool_input.get("student_group", "All Students")
+        grade_level = tool_input.get("grade_level", "All Grades")
 
         results = client.get_assessment_data(
             organization_id=org_id,
             organization_level=org_type,
             school_year=year,
             test_subject=subject,
-            student_group="All Students",
-            grade_level="All Grades",
+            student_group=student_group,
+            grade_level=grade_level,
         )
 
         if not results:
