@@ -38,7 +38,7 @@ class TestMetrics:
             assert key in METRICS, f"Missing metric: {key}"
 
     def test_metric_count(self):
-        assert len(METRICS) == 12
+        assert len(METRICS) == 19
 
 
 class TestSchoolMetrics:

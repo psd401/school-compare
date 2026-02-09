@@ -7,7 +7,7 @@ import streamlit as st
 
 from config.settings import get_settings
 from src.data.client import get_client
-from src.data.models import AssessmentData, DemographicData, GraduationData, StaffingData, SpendingData
+from src.data.models import AssessmentData, DemographicData, GraduationData, StaffingData, SpendingData, SpendingCategory
 from src.viz.charts import (
     create_achievement_comparison,
     create_score_distribution,
@@ -17,6 +17,7 @@ from src.viz.charts import (
     create_staffing_chart,
     create_spending_chart,
     create_spending_trend_chart,
+    create_spending_breakdown_chart,
     create_multi_entity_trend_chart,
     add_suppression_footnote,
 )
@@ -156,6 +157,7 @@ def main():
     staffing_data: dict[str, list[StaffingData]] = {}
     spending_data: dict[str, SpendingData] = {}
     spending_trends: dict[str, dict[str, float]] = {}
+    spending_categories: dict[str, list[SpendingCategory]] = {}
 
     with st.status("Loading comparison data...", expanded=True) as status:
         for entity in st.session_state.selected_entities:
@@ -202,6 +204,9 @@ def main():
                 trend = client.get_spending_trend(org_id)
                 if trend:
                     spending_trends[name] = trend
+                categories = client.get_spending_by_category(org_id)
+                if categories:
+                    spending_categories[name] = categories
 
         status.update(label="Data loaded!", state="complete", expanded=False)
 
@@ -364,6 +369,22 @@ def main():
                 st.markdown("#### 10-Year Spending Trends")
                 fig = create_spending_trend_chart(spending_trends)
                 st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
+
+            # Spending by category breakdown
+            if spending_categories:
+                st.markdown("#### Spending by Program Category")
+                cat_names = list(spending_categories.keys())
+                if len(cat_names) == 2:
+                    cat_cols = st.columns(2)
+                    for idx, name in enumerate(cat_names):
+                        with cat_cols[idx]:
+                            fig = create_spending_breakdown_chart(spending_categories[name], district_name=name)
+                            st.plotly_chart(fig, width="stretch")
+                else:
+                    for name in cat_names:
+                        fig = create_spending_breakdown_chart(spending_categories[name], district_name=name)
+                        st.plotly_chart(fig, width="stretch")
                 st.caption("*Hover over chart and click the camera icon to download as PNG*")
 
             st.caption("Source: OSPI F-196 Financial Reporting Data")

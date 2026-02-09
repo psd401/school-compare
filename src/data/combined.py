@@ -9,7 +9,7 @@ import streamlit as st
 from sodapy import Socrata
 
 from config.settings import get_settings, DATASET_IDS
-from .client import F196_DATA_PATH
+from .client import F196_DATA_PATH, F196_CATEGORIES_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +129,41 @@ METRICS = {
         "label": "Total Enrollment",
         "category": "Size",
         "format": "{:,.0f}",
+    },
+    "pct_spending_basic_ed": {
+        "label": "Basic Education Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
+    },
+    "pct_spending_sped": {
+        "label": "Special Education Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
+    },
+    "pct_spending_cte": {
+        "label": "Vocational/CTE Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
+    },
+    "pct_spending_compensatory": {
+        "label": "Compensatory Ed Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
+    },
+    "pct_spending_support": {
+        "label": "Districtwide Support Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
+    },
+    "pct_spending_transportation": {
+        "label": "Transportation Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
+    },
+    "pct_spending_food": {
+        "label": "Food Services Spending (%)",
+        "category": "Spending Detail",
+        "format": "{:.1f}%",
     },
 }
 
@@ -370,6 +405,46 @@ def _load_staffing_data() -> pd.DataFrame:
     return df[['district_code', 'teacher_experience', 'pct_teachers_masters', 'teacher_count']]
 
 
+@st.cache_data(ttl=86400, show_spinner="Loading spending categories...")
+def _load_spending_categories_data() -> pd.DataFrame:
+    """Load spending category percentages from expenditures_by_program.csv, pivoted by category."""
+    if not F196_CATEGORIES_PATH.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(F196_CATEGORIES_PATH)
+    df['district_code'] = df['district_code'].astype(str)
+    df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
+
+    # Calculate total per district for percentage
+    totals = df.groupby('district_code')['amount'].sum().rename('total')
+    df = df.merge(totals, on='district_code')
+    df['pct'] = (df['amount'] / df['total'] * 100).round(1)
+
+    # Map category names to column keys
+    category_map = {
+        'Basic Education': 'pct_spending_basic_ed',
+        'Special Education': 'pct_spending_sped',
+        'Vocational/CTE': 'pct_spending_cte',
+        'Compensatory Education': 'pct_spending_compensatory',
+        'Districtwide Support': 'pct_spending_support',
+        'Transportation': 'pct_spending_transportation',
+        'Food Services': 'pct_spending_food',
+    }
+
+    # Filter to categories we want and pivot
+    df = df[df['category'].isin(category_map.keys())]
+    df['col_key'] = df['category'].map(category_map)
+
+    pivot = df.pivot_table(
+        index='district_code',
+        columns='col_key',
+        values='pct',
+        aggfunc='first',
+    ).reset_index()
+
+    return pivot
+
+
 # -------------------------------------------------------------------------
 # School-Level Data Loaders
 # -------------------------------------------------------------------------
@@ -557,18 +632,20 @@ def get_all_district_data() -> pd.DataFrame:
     Returns DataFrame with columns for each metric plus district info.
     """
     # Load each data source in parallel
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         spending_future = executor.submit(_load_spending_data)
         assessment_future = executor.submit(_load_assessment_data)
         graduation_future = executor.submit(_load_graduation_data)
         demographics_future = executor.submit(_load_demographics_data)
         staffing_future = executor.submit(_load_staffing_data)
+        spending_cat_future = executor.submit(_load_spending_categories_data)
 
     spending = spending_future.result()
     assessment = assessment_future.result()
     graduation = graduation_future.result()
     demographics = demographics_future.result()
     staffing = staffing_future.result()
+    spending_categories = spending_cat_future.result()
 
     if spending.empty:
         return pd.DataFrame()
@@ -592,6 +669,10 @@ def get_all_district_data() -> pd.DataFrame:
     if not staffing.empty:
         df = df.merge(staffing, on='district_code', how='left')
 
+    # Merge spending categories
+    if not spending_categories.empty:
+        df = df.merge(spending_categories, on='district_code', how='left')
+
     # Calculate student-teacher ratio from enrollment and teacher_count
     if 'enrollment' in df.columns and 'teacher_count' in df.columns:
         df['student_teacher_ratio'] = (df['enrollment'] / df['teacher_count']).round(1)
@@ -600,7 +681,10 @@ def get_all_district_data() -> pd.DataFrame:
     numeric_cols = [
         'per_pupil_expenditure', 'enrollment', 'ela_proficiency', 'math_proficiency',
         'science_proficiency', 'graduation_rate_4yr', 'pct_low_income', 'pct_ell',
-        'pct_sped', 'teacher_experience', 'pct_teachers_masters', 'student_teacher_ratio'
+        'pct_sped', 'teacher_experience', 'pct_teachers_masters', 'student_teacher_ratio',
+        'pct_spending_basic_ed', 'pct_spending_sped', 'pct_spending_cte',
+        'pct_spending_compensatory', 'pct_spending_support', 'pct_spending_transportation',
+        'pct_spending_food',
     ]
     for col in numeric_cols:
         if col in df.columns:

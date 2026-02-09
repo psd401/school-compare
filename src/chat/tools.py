@@ -166,6 +166,11 @@ TOOL_SCHEMAS = [
                     "description": "If true, include 10-year spending trend data",
                     "default": False,
                 },
+                "include_categories": {
+                    "type": "boolean",
+                    "description": "If true, include spending breakdown by program category (e.g., Basic Education, Special Education, CTE, etc.)",
+                    "default": False,
+                },
             },
             "required": ["district_code"],
         },
@@ -191,6 +196,13 @@ TOOL_SCHEMAS = [
                         "pct_teachers_masters",
                         "student_teacher_ratio",
                         "enrollment",
+                        "pct_spending_basic_ed",
+                        "pct_spending_sped",
+                        "pct_spending_cte",
+                        "pct_spending_compensatory",
+                        "pct_spending_support",
+                        "pct_spending_transportation",
+                        "pct_spending_food",
                     ],
                     "description": "Metric for the x-axis (independent variable)",
                 },
@@ -209,6 +221,13 @@ TOOL_SCHEMAS = [
                         "pct_teachers_masters",
                         "student_teacher_ratio",
                         "enrollment",
+                        "pct_spending_basic_ed",
+                        "pct_spending_sped",
+                        "pct_spending_cte",
+                        "pct_spending_compensatory",
+                        "pct_spending_support",
+                        "pct_spending_transportation",
+                        "pct_spending_food",
                     ],
                     "description": "Metric for the y-axis (dependent variable)",
                 },
@@ -398,6 +417,16 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
                 output += "\n**10-Year Spending Trend (Per-Pupil):**\n"
                 for yr, amount in sorted(trend.items()):
                     output += f"- 20{yr}: ${amount:,.0f}\n"
+
+        include_categories = tool_input.get("include_categories", False)
+        if include_categories:
+            categories = client.get_spending_by_category(district_code)
+            if categories:
+                output += "\n**Spending by Program Category:**\n"
+                for cat in categories:
+                    amt = f"${cat.amount:,.0f}" if cat.amount else "N/A"
+                    pct = f" ({cat.percent_of_total:.1f}%)" if cat.percent_of_total else ""
+                    output += f"- {cat.category}: {amt}{pct}\n"
 
         output += "\n*Source: OSPI F-196 Financial Reporting Data*"
         return output
