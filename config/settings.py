@@ -62,5 +62,4 @@ DATASET_IDS = {
     "graduation": "76iv-8ed4",  # Graduation rates (through 2023-24)
     "graduation_2024_25": "isxb-523t",  # Graduation rates (2024-25+)
     "teachers": "yp28-ks6d",  # Teacher data
-    "directory": "fhxx-d5zv",  # School directory
 }
