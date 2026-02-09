@@ -62,3 +62,4 @@ data/cache/
 
 # Large raw F-196 data (not needed at runtime)
 data/f196/f196_2023-24_items.csv
+data/f196/table-2-expenditures-*.xlsx
