@@ -635,6 +635,13 @@ def create_correlation_scatter(
     required_cols = [entity_code_col, entity_name_col, x_metric, y_metric]
     if "enrollment" in df.columns:
         required_cols.append("enrollment")
+
+    # Validate all required columns exist in the DataFrame
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        labels = ", ".join(missing)
+        return _empty_chart(f"Data not available for: {labels}")
+
     plot_df = df[required_cols].dropna(subset=[x_metric, y_metric]).copy()
 
     # Ensure enrollment column exists for tooltip

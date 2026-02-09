@@ -1,5 +1,6 @@
 """Correlation analysis page for exploring relationships between metrics."""
 
+import pandas as pd
 import streamlit as st
 
 from src.data.combined import (
@@ -228,7 +229,11 @@ st.download_button(
 # Data summary
 col1, col2, col3 = st.columns(3)
 
-valid_data = filtered_df[[x_metric, y_metric]].dropna()
+# Guard against missing metric columns (API data may not have loaded)
+if x_metric in filtered_df.columns and y_metric in filtered_df.columns:
+    valid_data = filtered_df[[x_metric, y_metric]].dropna()
+else:
+    valid_data = pd.DataFrame()
 
 filtered_count = len(valid_data)
 is_filtered = filtered_count < total_count
