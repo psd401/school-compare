@@ -604,6 +604,173 @@ def create_spending_breakdown_chart(
     return fig
 
 
+def create_enrollment_trend_chart(
+    data: dict[str, dict[str, int]],
+) -> go.Figure:
+    """
+    Create line chart showing enrollment trends over time.
+
+    Args:
+        data: Dict mapping organization name to dict of year -> enrollment count
+    """
+    if not data:
+        return _empty_chart("No enrollment trend data available")
+
+    fig = go.Figure()
+
+    for i, (org_name, yearly_data) in enumerate(data.items()):
+        years = sorted(yearly_data.keys())
+        values = [yearly_data[y] for y in years]
+
+        fig.add_trace(
+            go.Scatter(
+                x=years,
+                y=values,
+                name=org_name,
+                mode="lines+markers",
+                line=dict(color=ENTITY_COLORS[i % len(ENTITY_COLORS)]),
+                hovertemplate="%{x}<br>%{y:,} students<extra>%{fullData.name}</extra>",
+            )
+        )
+
+    fig.update_layout(
+        title="Student Enrollment Trends (F-196)",
+        xaxis_title="School Year",
+        yaxis_title="Student Enrollment",
+        yaxis_tickformat=",",
+        legend_title="",
+        hovermode="x unified",
+    )
+
+    return fig
+
+
+def create_subgroup_proficiency_chart(
+    data: dict[str, Optional[float]],
+    subject: str = "ELA",
+    org_name: str = "",
+) -> go.Figure:
+    """
+    Create horizontal bar chart showing proficiency rates by subgroup.
+
+    Args:
+        data: Dict mapping subgroup name to proficiency rate (None if suppressed)
+        subject: Test subject for the title
+        org_name: Organization name for the title
+    """
+    # Filter out None values (suppressed)
+    filtered = {k: v for k, v in data.items() if v is not None}
+
+    if not filtered:
+        return _empty_chart("Insufficient subgroup data available")
+
+    # Get reference rate for "All Students"
+    ref_rate = filtered.get("All Students")
+
+    # Sort ascending by proficiency for visual clarity
+    sorted_groups = sorted(filtered.items(), key=lambda x: x[1])
+    groups = [g[0] for g in sorted_groups]
+    values = [g[1] for g in sorted_groups]
+
+    # Color bars: reference group neutral, others by relative performance
+    colors = []
+    for group, val in sorted_groups:
+        if group == "All Students":
+            colors.append(COLORS["primary"])
+        elif ref_rate is not None and val >= ref_rate:
+            colors.append(COLORS["success"])
+        else:
+            colors.append(COLORS["warning"])
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=values,
+            y=groups,
+            orientation="h",
+            marker_color=colors,
+            hovertemplate="<b>%{y}</b><br>%{x:.1f}%<extra></extra>",
+        )
+    )
+
+    # Add reference line at "All Students" rate
+    if ref_rate is not None:
+        fig.add_vline(
+            x=ref_rate,
+            line_dash="dash",
+            line_color="gray",
+            annotation_text=f"All Students: {ref_rate:.1f}%",
+            annotation_position="top",
+        )
+
+    title = f"{subject} Proficiency by Subgroup"
+    if org_name:
+        title = f"{org_name} — {title}"
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="% Meeting Standard",
+        xaxis_range=[0, 100],
+        yaxis_title="",
+        height=max(350, len(groups) * 40 + 100),
+    )
+
+    return fig
+
+
+def create_grade_breakdown_chart(
+    data: list[dict],
+    org_name: str = "",
+) -> go.Figure:
+    """
+    Create grouped bar chart showing proficiency by grade and subject.
+
+    Args:
+        data: List of dicts with keys: grade, subject, proficiency
+        org_name: Organization name for the title
+    """
+    if not data:
+        return _empty_chart("No grade-level data available")
+
+    df = pd.DataFrame(data)
+
+    # Subject color mapping consistent with app palette
+    subject_colors = {
+        "ELA": COLORS["primary"],
+        "Math": COLORS["secondary"],
+        "Science": COLORS["success"],
+    }
+
+    fig = px.bar(
+        df,
+        x="grade",
+        y="proficiency",
+        color="subject",
+        barmode="group",
+        color_discrete_map=subject_colors,
+    )
+
+    title = "Proficiency by Grade Level"
+    if org_name:
+        title = f"{org_name} — {title}"
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Grade",
+        yaxis_title="% Meeting Standard",
+        yaxis_range=[0, 100],
+        legend_title="Subject",
+        hovermode="x unified",
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>%{x}</b><br>%{y:.1f}%<extra>%{fullData.name}</extra>"
+    )
+
+    return fig
+
+
 def create_correlation_scatter(
     df: pd.DataFrame,
     x_metric: str,

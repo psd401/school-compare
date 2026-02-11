@@ -13,7 +13,11 @@ from src.viz.charts import (
     create_program_demographics_chart,
     create_spending_trend_chart,
     create_spending_breakdown_chart,
+    create_enrollment_trend_chart,
     create_trend_chart,
+    create_subgroup_proficiency_chart,
+    create_equity_gap_chart,
+    create_grade_breakdown_chart,
     add_suppression_footnote,
 )
 
@@ -171,10 +175,12 @@ def main():
         # Spending data (district level only)
         spending_data = None
         spending_trend = None
+        enrollment_trend = None
         if org_level == "District":
             st.write("Loading spending data...")
             spending_data = client.get_spending_data(org_id, spending_year)
             spending_trend = client.get_spending_trend(org_id)
+            enrollment_trend = client.get_enrollment_trend(org_id)
 
         status.update(label="Data loaded!", state="complete", expanded=False)
 
@@ -277,6 +283,88 @@ def main():
         )
         st.plotly_chart(fig, width="stretch")
         st.caption("*Hover over chart and click the camera icon to download as PNG*")
+
+        # Subgroup Analysis
+        if st.toggle("Show Subgroup Analysis", key="explorer_subgroup_analysis"):
+            st.markdown("#### Subgroup Proficiency Analysis")
+            subgroup_subject = st.selectbox(
+                "Subject:",
+                options=["ELA", "Math", "Science"],
+                key="explorer_subgroup_subject",
+            )
+
+            subgroup_data = {}
+            with st.spinner("Loading subgroup data..."):
+                for group in settings.STUDENT_GROUPS_CORE:
+                    group_assessments = client.get_assessment_data(
+                        organization_id=org_id,
+                        organization_level=org_level,
+                        school_year=school_year,
+                        test_subject=subgroup_subject,
+                        student_group=group,
+                        grade_level=grade_level,
+                    )
+                    for a in group_assessments:
+                        if a.proficiency_rate is not None:
+                            subgroup_data[group] = a.proficiency_rate
+                            break
+
+            if len(subgroup_data) >= 2:
+                sg_tab1, sg_tab2 = st.tabs(["Proficiency Rates", "Equity Gaps"])
+                with sg_tab1:
+                    fig = create_subgroup_proficiency_chart(
+                        subgroup_data,
+                        subject=subgroup_subject,
+                        org_name=selected_entity.display_name,
+                    )
+                    st.plotly_chart(fig, width="stretch")
+                with sg_tab2:
+                    fig = create_equity_gap_chart(
+                        {selected_entity.display_name: subgroup_data},
+                        subject=subgroup_subject,
+                    )
+                    st.plotly_chart(fig, width="stretch")
+                suppressed_groups = [g for g in settings.STUDENT_GROUPS_CORE if g not in subgroup_data]
+                if suppressed_groups:
+                    st.caption(f"Data suppressed for: {', '.join(suppressed_groups)}")
+            else:
+                st.info("Insufficient subgroup data available (most groups suppressed).")
+
+        # Grade-Level Breakdown
+        if st.toggle("Show Grade-Level Breakdown", key="explorer_grade_breakdown"):
+            st.markdown("#### Proficiency by Grade Level")
+
+            grade_data = []
+            with st.spinner("Loading grade-level data..."):
+                for grade in settings.GRADE_LEVELS[1:]:  # Skip "All Grades"
+                    for subj in ["ELA", "Math", "Science"]:
+                        grade_assessments = client.get_assessment_data(
+                            organization_id=org_id,
+                            organization_level=org_level,
+                            school_year=school_year,
+                            test_subject=subj,
+                            student_group=student_group,
+                            grade_level=grade,
+                        )
+                        for a in grade_assessments:
+                            if a.proficiency_rate is not None:
+                                grade_data.append({
+                                    "grade": grade,
+                                    "subject": subj,
+                                    "proficiency": a.proficiency_rate,
+                                })
+                                break
+
+            grades_with_data = set(d["grade"] for d in grade_data)
+            if len(grades_with_data) >= 2:
+                fig = create_grade_breakdown_chart(
+                    grade_data,
+                    org_name=selected_entity.display_name,
+                )
+                st.plotly_chart(fig, width="stretch")
+                st.caption("Science is only tested in grades 5, 8, and 11.")
+            else:
+                st.info("Fewer than 2 grades have assessment data available.")
 
         # Year-over-year trend
         if st.toggle("Show Assessment Trend", key="explorer_assessment_trend"):
@@ -460,6 +548,13 @@ def main():
             if spending_trend:
                 st.markdown("#### 10-Year Spending Trend")
                 fig = create_spending_trend_chart({selected_entity.display_name: spending_trend})
+                st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
+
+            # Enrollment trend chart
+            if enrollment_trend:
+                st.markdown("#### 10-Year Enrollment Trend")
+                fig = create_enrollment_trend_chart({selected_entity.display_name: enrollment_trend})
                 st.plotly_chart(fig, width="stretch")
                 st.caption("*Hover over chart and click the camera icon to download as PNG*")
 

@@ -18,7 +18,10 @@ from src.viz.charts import (
     create_spending_chart,
     create_spending_trend_chart,
     create_spending_breakdown_chart,
+    create_enrollment_trend_chart,
     create_multi_entity_trend_chart,
+    create_subgroup_proficiency_chart,
+    create_equity_gap_chart,
     add_suppression_footnote,
 )
 
@@ -157,6 +160,7 @@ def main():
     staffing_data: dict[str, list[StaffingData]] = {}
     spending_data: dict[str, SpendingData] = {}
     spending_trends: dict[str, dict[str, float]] = {}
+    enrollment_trends: dict[str, dict[str, int]] = {}
     spending_categories: dict[str, list[SpendingCategory]] = {}
 
     with st.status("Loading comparison data...", expanded=True) as status:
@@ -204,6 +208,9 @@ def main():
                 trend = client.get_spending_trend(org_id)
                 if trend:
                     spending_trends[name] = trend
+                enroll_trend = client.get_enrollment_trend(org_id)
+                if enroll_trend:
+                    enrollment_trends[name] = enroll_trend
                 categories = client.get_spending_by_category(org_id)
                 if categories:
                     spending_categories[name] = categories
@@ -222,6 +229,45 @@ def main():
             st.plotly_chart(fig, width="stretch")
             st.caption("*Hover over chart and click the camera icon to download as PNG*")
             st.caption(add_suppression_footnote())
+
+            # Subgroup Analysis
+            with st.expander("Subgroup Analysis"):
+                sg_subject = st.selectbox(
+                    "Subject:",
+                    options=["ELA", "Math", "Science"],
+                    key="comp_subgroup_subject",
+                )
+
+                for entity in st.session_state.selected_entities:
+                    entity_name = entity["name"]
+                    entity_subgroup_data = {}
+                    with st.spinner(f"Loading subgroups for {entity_name}..."):
+                        for group in settings.STUDENT_GROUPS_CORE:
+                            group_assessments = client.get_assessment_data(
+                                organization_id=entity["id"],
+                                organization_level=entity["type"],
+                                school_year=school_year,
+                                test_subject=sg_subject,
+                                student_group=group,
+                                grade_level=grade_level,
+                            )
+                            for a in group_assessments:
+                                if a.proficiency_rate is not None:
+                                    entity_subgroup_data[group] = a.proficiency_rate
+                                    break
+
+                    if len(entity_subgroup_data) >= 2:
+                        fig = create_subgroup_proficiency_chart(
+                            entity_subgroup_data,
+                            subject=sg_subject,
+                            org_name=entity_name,
+                        )
+                        st.plotly_chart(fig, width="stretch")
+                        suppressed = [g for g in settings.STUDENT_GROUPS_CORE if g not in entity_subgroup_data]
+                        if suppressed:
+                            st.caption(f"Data suppressed for: {', '.join(suppressed)}")
+                    else:
+                        st.info(f"Insufficient subgroup data for {entity_name}.")
         else:
             st.warning("No assessment data available for the selected entities.")
 
@@ -368,6 +414,13 @@ def main():
             if spending_trends:
                 st.markdown("#### 10-Year Spending Trends")
                 fig = create_spending_trend_chart(spending_trends)
+                st.plotly_chart(fig, width="stretch")
+                st.caption("*Hover over chart and click the camera icon to download as PNG*")
+
+            # Enrollment trend chart
+            if enrollment_trends:
+                st.markdown("#### 10-Year Enrollment Trends")
+                fig = create_enrollment_trend_chart(enrollment_trends)
                 st.plotly_chart(fig, width="stretch")
                 st.caption("*Hover over chart and click the camera icon to download as PNG*")
 

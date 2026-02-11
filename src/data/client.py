@@ -705,6 +705,39 @@ class OSPIClient:
 
 
     @st.cache_data(ttl=86400, show_spinner=False)
+    def get_enrollment_trend(
+        _self,
+        district_code: str,
+    ) -> dict[str, int]:
+        """
+        Get enrollment trend for a district across all available years from F-196 data.
+
+        Returns dict mapping school year to enrollment count.
+        """
+        if not F196_DATA_PATH.exists():
+            logger.warning("F-196 data file not found: %s", F196_DATA_PATH)
+            return {}
+
+        df = pd.read_csv(F196_DATA_PATH)
+
+        row = df[df['district_code'].astype(str) == str(district_code)]
+        if row.empty:
+            logger.warning("No F-196 enrollment data for district %s", district_code)
+            return {}
+
+        row = row.iloc[0]
+        trend = {}
+
+        year_pattern = re.compile(r'^enrollment_(\d{2}-\d{2})$')
+        years = sorted(m.group(1) for col in df.columns if (m := year_pattern.match(col)))
+        for year in years:
+            col = f'enrollment_{year}'
+            if col in row.index and pd.notna(row[col]):
+                trend[year] = int(row[col])
+
+        return trend
+
+    @st.cache_data(ttl=86400, show_spinner=False)
     def get_spending_by_category(
         _self,
         district_code: str,
