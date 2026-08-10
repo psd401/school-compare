@@ -2,6 +2,8 @@
 
 Washington state school and district comparison tool. Compare demographics, achievement, staffing, and spending across schools and districts using public OSPI data.
 
+**Live app:** [psd401-school-compare.streamlit.app](https://psd401-school-compare.streamlit.app/) (hosted on Streamlit Community Cloud; may take a few seconds to wake after inactivity)
+
 Built with Streamlit, Plotly, and the Socrata Open Data API.
 
 ## Pages
