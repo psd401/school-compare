@@ -3,6 +3,7 @@
 from typing import Any
 from google.genai import types
 
+from config.settings import get_settings
 from src.data.client import get_client
 
 # Tool schemas (generic format)
@@ -62,12 +63,13 @@ TOOL_SCHEMAS = [
                 },
                 "student_group": {
                     "type": "string",
-                    "description": "Student subgroup (e.g., 'All Students', 'Low-Income', 'English Language Learners', 'Students with Disabilities', 'Hispanic/Latino of any race(s)', 'Black/African American', 'Asian', 'White'). Defaults to 'All Students'.",
+                    "description": "Student subgroup, spelled as the dataset stores it: 'All Students', 'Low-Income', 'English Language Learners', 'Students with Disabilities', 'White', 'Asian', 'Hispanic/ Latino of any race(s)', 'Black/ African American', 'American Indian/ Alaskan Native', 'Native Hawaiian/Pacific Islander', 'Two Or More Races', 'Female', 'Male', 'Migrant', 'Section 504', 'Homeless', 'Military Parent', 'Foster Care'. Note the space after the slash in several names. Defaults to 'All Students'.",
                     "default": "All Students",
                 },
                 "grade_level": {
                     "type": "string",
-                    "description": "Grade level (e.g., 'All Grades', '3rd Grade', '4th Grade', '5th Grade', '6th Grade', '7th Grade', '8th Grade', '10th Grade', '11th Grade'). Defaults to 'All Grades'.",
+                    "enum": ["All Grades", "03", "04", "05", "06", "07", "08", "10", "11"],
+                    "description": "Grade level as the zero-padded code the dataset stores: 'All Grades', '03' (3rd grade) through '08' (8th grade), '10', or '11'. Defaults to 'All Grades'.",
                     "default": "All Grades",
                 },
             },
@@ -274,7 +276,9 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
         year = tool_input.get("school_year", "2023-24")
         subject = tool_input.get("subject")
         student_group = tool_input.get("student_group", "All Students")
-        grade_level = tool_input.get("grade_level", "All Grades")
+        # The model may still emit a display label ("3rd Grade"); the dataset only
+        # matches the zero-padded code, so normalize before querying.
+        grade_level = get_settings().grade_code(tool_input.get("grade_level", "All Grades"))
 
         results = client.get_assessment_data(
             organization_id=org_id,

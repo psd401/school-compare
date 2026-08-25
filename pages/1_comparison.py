@@ -139,6 +139,7 @@ def main():
         student_group = st.selectbox(
             "Student Group:",
             options=group_options,
+            format_func=settings.student_group_label,
             index=0,
             key="comp_student_group",
         )
@@ -146,6 +147,7 @@ def main():
         grade_level = st.selectbox(
             "Grade Level:",
             options=settings.GRADE_LEVELS,
+            format_func=settings.grade_label,
             index=0,
             key="comp_grade_level",
         )
@@ -253,7 +255,7 @@ def main():
                             )
                             for a in group_assessments:
                                 if a.proficiency_rate is not None:
-                                    entity_subgroup_data[group] = a.proficiency_rate
+                                    entity_subgroup_data[settings.student_group_label(group)] = a.proficiency_rate
                                     break
 
                     if len(entity_subgroup_data) >= 2:
@@ -263,7 +265,11 @@ def main():
                             org_name=entity_name,
                         )
                         st.plotly_chart(fig, width="stretch")
-                        suppressed = [g for g in settings.STUDENT_GROUPS_CORE if g not in entity_subgroup_data]
+                        suppressed = [
+                            settings.student_group_label(g)
+                            for g in settings.STUDENT_GROUPS_CORE
+                            if settings.student_group_label(g) not in entity_subgroup_data
+                        ]
                         if suppressed:
                             st.caption(f"Data suppressed for: {', '.join(suppressed)}")
                     else:

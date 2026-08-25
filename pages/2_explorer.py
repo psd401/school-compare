@@ -125,6 +125,7 @@ def main():
         student_group = st.selectbox(
             "Student Group:",
             options=group_options,
+            format_func=settings.student_group_label,
             index=0,
             key="explorer_student_group",
         )
@@ -132,6 +133,7 @@ def main():
         grade_level = st.selectbox(
             "Grade Level:",
             options=settings.GRADE_LEVELS,
+            format_func=settings.grade_label,
             index=0,
             key="explorer_grade_level",
         )
@@ -186,7 +188,7 @@ def main():
 
     # Overview metrics in cards
     subgroup_label = f" ({student_group})" if student_group != "All Students" else ""
-    grade_label = f" — {grade_level}" if grade_level != "All Grades" else ""
+    grade_label = f" — {settings.grade_label(grade_level)}" if grade_level != "All Grades" else ""
     st.subheader(f"Overview{subgroup_label}{grade_label}")
 
     metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
@@ -306,7 +308,7 @@ def main():
                     )
                     for a in group_assessments:
                         if a.proficiency_rate is not None:
-                            subgroup_data[group] = a.proficiency_rate
+                            subgroup_data[settings.student_group_label(group)] = a.proficiency_rate
                             break
 
             if len(subgroup_data) >= 2:
@@ -324,7 +326,11 @@ def main():
                         subject=subgroup_subject,
                     )
                     st.plotly_chart(fig, width="stretch")
-                suppressed_groups = [g for g in settings.STUDENT_GROUPS_CORE if g not in subgroup_data]
+                suppressed_groups = [
+                    settings.student_group_label(g)
+                    for g in settings.STUDENT_GROUPS_CORE
+                    if settings.student_group_label(g) not in subgroup_data
+                ]
                 if suppressed_groups:
                     st.caption(f"Data suppressed for: {', '.join(suppressed_groups)}")
             else:
@@ -349,7 +355,7 @@ def main():
                         for a in grade_assessments:
                             if a.proficiency_rate is not None:
                                 grade_data.append({
-                                    "grade": grade,
+                                    "grade": settings.grade_label(grade),
                                     "subject": subj,
                                     "proficiency": a.proficiency_rate,
                                 })

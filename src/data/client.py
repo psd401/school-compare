@@ -280,7 +280,9 @@ class OSPIClient:
             where_parts.append(f"testsubject='{test_subject}'")
 
         if student_group:
-            where_parts.append(f"studentgroup='{student_group}'")
+            # Two group names were respelled between dataset years.
+            resolved_group = get_settings().student_group_for_year(student_group, school_year)
+            where_parts.append(f"studentgroup='{resolved_group}'")
 
         where_clause = " AND ".join(where_parts)
 
