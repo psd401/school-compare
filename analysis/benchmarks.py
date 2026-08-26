@@ -18,7 +18,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fetch  # noqa: E402
-from stats_lite import auc, binom_sf, five_number, spearman, spearman_p, wilson  # noqa: E402
+from stats_lite import binom_sf, five_number, spearman, spearman_p, wilson  # noqa: E402
 
 YEARS = list(fetch.ASSESSMENT_DATASETS)
 PAIRS = list(zip(YEARS[:-1], YEARS[1:]))
