@@ -62,6 +62,10 @@ streamlit run app.py
 - **Assessment, Demographics, Graduation, Staffing**: [Washington State Report Card](https://reportcard.ospi.k12.wa.us) via [data.wa.gov](https://data.wa.gov) Socrata API
 - **Spending (F-196)**: OSPI F-196 Financial Reporting Data (included in `data/f196/`)
 
+See [docs/improvement-benchmarks.md](docs/improvement-benchmarks.md) for what a
+typical year of proficiency change looks like across Washington, and for the
+statistical traps to avoid when ranking schools or districts by improvement.
+
 ### Data Availability by Year
 
 | Metric | Default Year | Notes |
@@ -130,5 +134,6 @@ school-compare/
 │   ├── settings.py        # App settings and env var loading
 │   └── datasets.yaml      # Socrata dataset IDs
 ├── data/f196/             # F-196 spending data (CSV/XLSX)
+├── docs/                  # Methodology notes
 └── tests/                 # Unit tests
 ```

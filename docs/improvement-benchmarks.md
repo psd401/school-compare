@@ -1,0 +1,226 @@
+# Improvement Benchmarks
+
+How much does proficiency actually move in a year? This note records what the
+Washington data says, so improvement targets get set against the observed
+distribution instead of a round number — and so the same statistical traps don't
+get re-walked each time the question comes up.
+
+Analysis date: **2026-08-25**. Source data through **2024-25**.
+
+---
+
+## Method
+
+Each school or district is matched to itself one year earlier at the same grade
+and subject, and the change in percent proficient is recorded in percentage
+points. This compares *this year's fourth graders to last year's fourth graders*
+— a grade-level comparison, not the same children growing a year older.
+
+| Element | Choice |
+|---|---|
+| Source | OSPI Report Card Assessment Data via data.wa.gov |
+| Datasets | `v928-8kke` (2021-22), `xh7m-utwp` (2022-23), `x73g-mrqp` (2023-24), `h5d9-vgwi` (2024-25) |
+| Proficiency | `percentlevel3 + percentlevel4`, expressed in percentage points |
+| Assessment | Smarter Balanced only (`testadministration='SBAC'`); WCAS and alternates excluded |
+| Grades | 3–8 and 10; grade 11 is a retake population and does not survive the cell-size floor |
+| Population | `studentgroup='All Students'` unless stated otherwise |
+| Cell-size floor | Tested cohort ≥ 20 in both years |
+| Quartiles | Linear interpolation between order statistics (NumPy/pandas default) |
+
+Two data notes that will bite anyone reproducing this:
+
+- **Each school year is its own dataset.** `x73g-mrqp` holds only 2023-24, despite
+  the "through 2023-24" comment that used to sit in `config/settings.py`.
+  Multi-year work means querying several datasets and concatenating.
+- **Suppressed rows store the literal string `"NULL"`**, not a SQL null, so
+  Socrata's own `IS NOT NULL` does not filter them. They must be dropped on
+  numeric conversion. This removes far more subgroup rows than All-Students rows.
+
+Only 2021-22 onward is usable. 2019-20 and 2020-21 have no assessment data, so
+any streak spanning COVID is undefined.
+
+---
+
+## What a typical year looks like
+
+Year-over-year change in percent proficient, 2023-24 → 2024-25, all grades
+pooled, tested cohort ≥ 20:
+
+| Level | Subject | n | Min | Q1 | Median | Q3 | Max | IQR |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| School | ELA | 4,928 | −41.5 | −5.4 | **+0.7** | +6.5 | +44.7 | 11.9 |
+| School | Math | 4,811 | −52.4 | −5.0 | **+0.8** | +6.4 | +46.0 | 11.4 |
+| District | ELA | 1,498 | −34.8 | −3.7 | **+0.6** | +4.9 | +43.4 | 8.6 |
+| District | Math | 1,460 | −39.7 | −3.1 | **+0.8** | +5.0 | +46.0 | 8.1 |
+
+The median is under one point everywhere. Roughly **46% of schools decline** in
+any given year. 39% gain 3 points or more, 31% gain 5 or more, 15% gain 10 or more.
+
+Grade 10 ELA is the consistent weak spot — median −1.6 while grades 3–8 are positive.
+
+### Cohort size sets the spread
+
+Same schools, same year, split by how many students actually tested:
+
+| Tested cohort | Q1 | Median | Q3 | IQR |
+|---|---:|---:|---:|---:|
+| 20–40 | −8.3 | +1.4 | +10.1 | **18.4** |
+| 41–60 | −7.4 | +0.2 | +7.7 | 15.1 |
+| 61–100 | −5.5 | +0.5 | +6.2 | 11.7 |
+| 101–150 | −3.5 | +1.0 | +5.4 | 8.9 |
+| 150+ | −2.6 | +1.0 | +4.6 | **7.2** |
+
+The median barely moves; the spread more than halves. A fixed percentage-point
+target is a far harder bar for a large school than a small one.
+
+### Districts of 5,000 or more
+
+Restricting to the 50 districts over 5,000 students, 2023-24 → 2024-25:
+
+| Subject | n | Min | Q1 | Median | Q3 | Max | IQR |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ELA | 350 | −20.6 | −1.1 | +1.0 | +3.0 | +17.0 | **4.1** |
+| Math | 350 | −12.2 | −1.0 | +0.9 | +2.9 | +13.1 | **3.9** |
+
+Among districts of this size the middle half of the state moves between **−1 and
++3 points** in a year. That is the realistic operating range.
+
+---
+
+## Four traps
+
+### 1. Ranking by improvement mostly ranks by size
+
+Top-quartile and bottom-quartile districts have almost identical median
+enrollment (961 and 953); the *middle* 50% is where the large districts are
+(median 3,461). Spearman(enrollment, change) = **−0.001** — size predicts the
+magnitude of movement, not its direction. Small entities fill both tails.
+
+| District enrollment | % top quartile | % bottom quartile |
+|---|---:|---:|
+| Under 600 | 50.0 | 23.5 |
+| 600–1,500 | 23.4 | 42.6 |
+| 1,500–4,000 | 18.6 | 20.9 |
+| 4,000–12,000 | 24.3 | 18.9 |
+| 12,000+ | **4.5** | **9.1** |
+
+### 2. Single-year rankings do not repeat
+
+Taking the top quartile in one year pair and following the same entities into
+the next, ranked against their own size peers and pooled over both available
+year pairs:
+
+| Group | Repeated | Rate | Chance |
+|---|---:|---:|---:|
+| Districts, all sizes | 21 / 90 | 23% | 25% |
+| Districts under 1,500 | 6 / 40 | 15% | 25% |
+| Districts 1,500–5,000 | 10 / 26 | 38% | 25% |
+| Districts 5,000+ | 6 / 26 | 23% | 25% |
+| Schools, every size band | — | 14–20% | 25% |
+
+Districts over 5,000 repeat at exactly the chance rate. Every school band is
+below it. The 1,500–5,000 band runs above chance but at p = 0.09 with 26
+districts — a lead, not a finding.
+
+**No school size band escapes this.** Even a 750-student school tests only about
+a hundred children per grade, so school-level improvement rankings are noise at
+every size.
+
+### 3. Build the null from year-specific base rates
+
+23 of 102 districts (1,500+) gained in all three years, against 12.8 expected
+from a coin flip. That looks like strong evidence of real improvers.
+
+It is not. The state drifted upward: **68%, 57%, and 72%** of these districts
+gained in the three respective years. Against that correct baseline the expected
+count is **28.1**, so 23 is *below* chance (p = 0.98). Same at 5,000+: 12
+observed against 14.4 expected.
+
+If anyone presents "gained three years running" as evidence a district is doing
+something right, this is the number to check.
+
+### 4. ELA-vs-Math agreement is not evidence of a district effect
+
+Three-year ELA and Math gains correlate at **+0.69**, which reads as a strong
+district signal. The same children sit both tests, so a strong incoming cohort
+lifts both together. Validity tests have to compare *different students*.
+
+---
+
+## What does hold up
+
+Starting proficiency does **not** predict subsequent gain — rho = −0.054,
++0.024, −0.040 across the three year pairs. Low-performing districts do not gain
+more and high-performing ones do not stall, so gains can be compared across very
+different starting points without adjustment.
+
+Three-year change **does** carry real signal, but it is specific to a grade band:
+
+| Comparison (three-year gain, districts 5,000+) | rho | p |
+|---|---:|---:|
+| Elementary: grades 3+4 vs grade 5 | +0.495 | 0.0005 |
+| Middle: grades 6+7 vs grade 8 | +0.751 | 0.0001 |
+| Middle 6-8 vs grade 10 | +0.338 | 0.019 |
+| **Elementary 3-5 vs middle 6-8** | **+0.111** | **0.44** |
+
+Separate cohorts of children within a band move together — a real effect. Across
+bands, nothing. Elementary, middle, and high school behave as three independent
+programs, and a single district number can be carried entirely by one of them.
+
+### Three-year totals, districts 5,000 or more
+
+2021-22 → 2024-25, endpoint comparison on matched grade × subject cells:
+
+- min −4.33 · Q1 +0.88 · **median +1.66** · Q3 +3.22 · max +8.96
+- **16%** reached +4 · 30% reached +3 · 42% reached +2 · 84% gained anything
+
+Eight districts cleared +4: Sumner-Bonney Lake (+8.96), Monroe (+6.05), Lake
+Stevens (+5.26), University Place (+4.80), Central Valley (+4.56), Edmonds
+(+4.44), Snoqualmie Valley (+4.42), Renton (+4.33). Peninsula sits ninth at
++3.97 — three hundredths short, which is a rounding artifact rather than a
+difference.
+
+Every district in that group gained in grades 6–8; grade 10 went backwards in
+five of the eight. Only Sumner-Bonney Lake and Monroe improved across all three
+bands.
+
+**No district over 5,000 has ever posted +3 in three consecutive years** — nor in
+two consecutive years, nor twice in any order. Only 6 of 50 managed it even once,
+and a +3 year sits at the 94th–98th percentile for a district that size.
+
+---
+
+## Recommendations for target-setting
+
+1. **Compare within a size band.** A statewide distribution is not a fair
+   yardstick for a large district or a large school.
+2. **Prefer three-year totals to annual ones.** Annual change is not
+   distinguishable from noise; three-year change is.
+3. **Set targets by grade band.** The three bands move independently, so a single
+   district figure hides which program is actually moving.
+4. **Treat one strong year as unverified.** It repeats at or below chance. Ask
+   whether it held before attributing it to a strategy.
+5. **Calibrate the number.** For a district over 5,000, the best *floor* anyone
+   has managed — a gain hit in every one of the three years — is +1.5
+   (Sumner-Bonney Lake, whose weakest year was +1.50 and whose three-year total
+   was +8.96). The next-best floors are Renton at +1.21 and Central Valley at +0.81. A three-year total
+   of +4 is demanding but reached by about one district in six; +3 every single
+   year has never happened.
+
+---
+
+## Caveats
+
+- Percent proficient is a **status measure** — it reflects who is enrolled and
+  tested as much as what was taught.
+- 220 of roughly 300 districts survive the cell-size and grade-coverage filters
+  in the latest transition, which drops the smallest districts.
+- Three year pairs is the entire usable window; nothing here speaks to
+  pre-pandemic behaviour.
+- None of this rules out that a specific district genuinely improved. It says the
+  aggregate pattern is dominated by sampling variance, so individual claims need
+  their own evidence.
+
+An interactive version of these distributions — filterable by student group,
+grade, subject, enrollment, and demographics — was published as an internal
+Claude artifact ("The Typical Year"). Ask James for the link.
