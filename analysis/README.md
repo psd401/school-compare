@@ -37,7 +37,17 @@ and takes a few minutes.
 |---|---|
 | `fetch.py` | Paginated Socrata pulls and the CSV cache. Holds the year → dataset map, the student-group vocabulary, and the per-year name aliases. |
 | `benchmarks.py` | Shaping, the six sections, and the CLI. |
+| `artifact_data.py` | Emits `data.json` and `topq.json` for the "Typical Year" artifact, using the same `cells()` filter as `benchmarks.py`. Output is deterministic. |
 | `stats_lite.py` | Rank statistics and resampling tests on numpy alone — Spearman with a permutation p-value, Mann-Whitney AUC, Wilson intervals, exact binomial tail. The app has no scipy dependency and does not need one for this. |
+
+Rebuilding the published artifact:
+
+```bash
+python analysis/artifact_data.py --out <dir>
+```
+
+Transition names must keep the arrow character and the band labels are rendered
+verbatim — both are display contracts the page reads, not just data.
 
 ## Things that will bite you
 
