@@ -66,3 +66,6 @@ data/f196/table-2-expenditures-*.xlsx
 
 # Local analysis reports (generated, not part of the app)
 /minter-creek-sba-2024-25.html
+
+# Cached Socrata pulls for analysis/ — regenerable, ~35 MB
+analysis/out/

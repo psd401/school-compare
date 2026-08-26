@@ -135,5 +135,6 @@ school-compare/
 │   └── datasets.yaml      # Socrata dataset IDs
 ├── data/f196/             # F-196 spending data (CSV/XLSX)
 ├── docs/                  # Methodology notes
+├── analysis/              # Offline benchmark analysis (not imported at runtime)
 └── tests/                 # Unit tests
 ```
