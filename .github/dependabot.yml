@@ -1,0 +1,26 @@
+# Managed per PSD standards. Notes:
+# - Python repos use package-ecosystem "uv" (GA; supports version AND
+#   security updates:
+#   https://github.blog/changelog/2025-12-16-dependabot-security-updates-now-support-uv/).
+# - Majors are ignored by default: major bumps are migration work humans
+#   schedule (standards/03; auto-remediation matrix). Ignore rules do not
+#   suppress Dependabot ALERTS.
+# - requirements.txt is GENERATED from uv.lock for Streamlit Community
+#   Cloud + the devcontainer; regenerate it when merging uv update PRs
+#   (command in the file header). No pip ecosystem entry - uv.lock is
+#   the source of truth.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major

@@ -28,13 +28,15 @@ Built with Streamlit, Plotly, and the Socrata Open Data API.
 # Clone and enter the project
 cd school-compare
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -e ".[dev]"
+# Install dependencies (runtime + dev, from the committed lockfile)
+uv sync --frozen
 ```
+
+Dependencies are declared in `pyproject.toml` and locked in `uv.lock` (org
+runtime standard: [uv](https://docs.astral.sh/uv/)). `requirements.txt` is a
+**generated** export of the lockfile kept for Streamlit Community Cloud and
+the devcontainer — regenerate it after dependency changes with
+`uv export --format requirements-txt --no-dev --no-hashes --no-emit-project -o requirements.txt`.
 
 ### Environment Variables
 
@@ -54,7 +56,7 @@ cp .env.example .env
 ### Run
 
 ```bash
-streamlit run app.py
+uv run streamlit run app.py
 ```
 
 ## Data Sources
@@ -79,7 +81,7 @@ statistical traps to avoid when ranking schools or districts by improvement.
 ## Tests
 
 ```bash
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ## Deployment
