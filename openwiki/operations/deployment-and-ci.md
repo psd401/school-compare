@@ -6,7 +6,7 @@ tags: [deployment, ci, streamlit-cloud, configuration]
 openwiki:
   roles: [operations, delivery]
   change_kinds: [config, ci, dependencies]
-  source_paths: [pyproject.toml, requirements.txt, README.md, .github/workflows/openwiki-update.yml, .github/workflows/security-scan.yml, .github/workflows/claude-review.yml]
+  source_paths: [pyproject.toml, requirements.txt, README.md, .streamlit/config.toml, .devcontainer/devcontainer.json, .github/workflows/openwiki-update.yml, .github/workflows/security-scan.yml, .github/workflows/claude-review.yml]
   validation_commands: ["pytest tests/ -q", "ruff check ."]
 ---
 
@@ -36,6 +36,14 @@ All three call org-owned reusable workflows in `PSD401/.github` at `@main` (deli
 - `claude-review.yml`: on PR opened/ready/reopened, skipped for dependabot; needs `id-token: write`; uses `BEDROCK_API_KEY`.
 - `security-scan.yml`: on PRs, push to main, weekly (Monday 09:00 UTC), manual; read-only permissions.
 - `openwiki-update.yml`: on push to main, weekly Monday 08:00 UTC, manual; regenerates this wiki with contents/PR write permission; concurrency group `openwiki` cancels superseded runs.
+
+No workflow runs `pytest`; run tests locally ([Testing](../testing/testing.md)). Do not hand-edit generated OpenWiki pages unless asked (see `AGENTS.md`).
+
+## Troubleshooting pointers
+
+Wrong Python version, rate-limit/timeouts (add Socrata token), chat unavailable (missing Google key), stale-data warnings on first load (refresh). From README.
+-only permissions.
+- `openwiki-update.yml`: on push to main, weekly Monday 08:00 UTC, manual; regenerates this wiki with contents/PR write permission; passes the `BEDROCK_API_KEY` and `PSD_AUTOMATION_APP_PRIVATE_KEY` secrets; concurrency group `openwiki` cancels superseded runs.
 
 No workflow runs `pytest`; run tests locally ([Testing](../testing/testing.md)). Do not hand-edit generated OpenWiki pages unless asked (see `AGENTS.md`).
 
