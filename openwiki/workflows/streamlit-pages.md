@@ -36,15 +36,14 @@ All pages obtain data through `get_client()` (an `OSPIClient`, in the excluded `
 
 ## Correlations (`pages/4_correlations.py`)
 
-<!-- openwiki: mermaid parse failed and this diagram was converted to a text fence so it does not break rendering. Fix the diagram source and restore the mermaid fence. Parser error: Heuristic: an unescaped angle bracket inside a label breaks rendering; rephrase the label. -->
-```text
+```mermaid
 flowchart TD
   L[Analysis level radio] -->|District| D[get_all_district_data + METRICS]
   L -->|School| S[get_all_school_data + SCHOOL_METRICS]
-  D & S --> F[ESD -> County -> Enrollment -> District filters]
-  F --> X[x/y from session_state.x_metric / y_metric]
+  D & S --> F[Filters: ESD, County, Enrollment, District]
+  F --> X[x/y from session_state x_metric and y_metric]
   X --> C[create_correlation_scatter]
-  C --> R[pearson r via Series.corr, CSV download]
+  C --> R[pearson r via Series.corr and CSV download]
 ```
 *Data flow of the Correlations page.*
 
@@ -65,7 +64,10 @@ Stateless `create_*` functions return `go.Figure`: `create_achievement_compariso
 
 ## Change navigation
 
-- New chart: add `create_*` to `charts.py` taking dataclasses/DataFrames (types from `src.data.models`), import it in the page, render with `st.plotly_chart(fig, width="stretch")`. There are no chart tests; verify by running the app page.
+- New chart: add `create_*` to `charts.py` taking dataclasses/DataFrames (types from `src.data.models`), import it from `src.viz.charts` in the page (add it to `src/viz/__init__.py` only if the package-level import is needed), render with `st.plotly_chart(fig, width="stretch")`. There are no chart tests; verify by running the app page with `streamlit run app.py`.
 - New metric on Correlations: add to `METRICS` (and `SCHOOL_METRICS` if school-level) in `src/data/combined.py`; run `pytest tests/test_combined.py` (it asserts exact counts 19 and 10, so update them), and update the `analyze_correlation` enums in [chat tools](chat-agent.md#extension-recipes).
+- New per-entity data on Comparison/Explorer: add the client call inside the loading `st.status` block; keep spending district-only.
+- Avoid putting heavy per-group loops outside toggles/expanders.
+lation` enums in [chat tools](chat-agent.md#extension-recipes).
 - New per-entity data on Comparison/Explorer: add the client call inside the loading `st.status` block; keep spending district-only.
 - Avoid putting heavy per-group loops outside toggles/expanders.

@@ -6,8 +6,8 @@ tags: [gemini, function-calling, chat, llm]
 openwiki:
   roles: [workflow, integration]
   change_kinds: [llm-tools, public-api, prompt]
-  source_paths: [src/chat/agent.py, src/chat/tools.py, src/chat/prompts.py, pages/3_chat.py, config/settings.py]
-  symbols: [ChatAgent, ChatAgent.chat, ChatAgent.get_response, TOOL_SCHEMAS, GEMINI_TOOLS, execute_tool, _convert_to_gemini_declaration, SYSTEM_PROMPT, TOOL_DESCRIPTIONS, _build_page_context]
+  source_paths: [src/chat/agent.py, src/chat/tools.py, src/chat/prompts.py, src/chat/__init__.py, pages/3_chat.py, config/settings.py]
+  symbols: [ChatAgent, ChatAgent.chat, ChatAgent.get_response, TOOL_SCHEMAS, AVAILABLE_TOOLS, GEMINI_TOOLS, execute_tool, _convert_to_gemini_declaration, SYSTEM_PROMPT, TOOL_DESCRIPTIONS, _build_page_context]
   test_paths: [tests/test_tools.py]
   invariants:
     - Tool names in TOOL_SCHEMAS must match the branches in execute_tool.
@@ -83,3 +83,5 @@ Non-goals: provider switching (Anthropic/OpenAI keys are reserved but unused), s
 ## Validation
 
 `pytest tests/test_tools.py -q` covers schema shape, Gemini conversion (enum preserved), and each tool's formatting with a mocked client (no results, results, suppressed, trend). The agent loop and the page have no tests; calling Gemini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.
+ini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.
+and is a conditional manual check only when `agent.py` changes.

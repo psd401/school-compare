@@ -25,7 +25,7 @@ pytest config (`pyproject.toml`): `testpaths = ["tests"]`, `pythonpath = ["."]`.
 
 ## Gaps
 
-No tests for Streamlit pages, `src/viz/charts.py`, `ChatAgent`, or `analysis/`. UI and chart changes require running `streamlit run app.py` manually.
+No tests for Streamlit pages, `src/viz/charts.py`, `ChatAgent`, or `analysis/`. UI and chart changes require running `streamlit run app.py` manually. The `analyze_correlation` branch of `execute_tool` (in `src/chat/tools.py`) is untested beyond its presence in the tool-name list; its correlation/R² output and top-5 formatting need a manual check or a new mocked test.
 
 ## Narrow checks by change
 
