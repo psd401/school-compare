@@ -1,0 +1,10 @@
+# OpenWiki: paths it must not read (gitignore syntax). See psd-dev-standards
+# standards/06-cicd-enforcement.md.
+
+# Credential templates
+.env*
+.streamlit/secrets.toml*
+
+# Bulk public OSPI F-196 finance data (no individuals): noise
+data/
+*.xlsx
