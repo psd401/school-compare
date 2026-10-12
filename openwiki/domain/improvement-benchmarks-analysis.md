@@ -22,9 +22,9 @@ Purpose: set improvement targets against the observed distribution of year-over-
 ## Pipeline
 
 - **`fetch.py`**: paginated Socrata pulls (batch 5000, 5 retries with backoff, `X-App-Token` header when `Settings.has_socrata_token`) of four assessment datasets (`ASSESSMENT_DATASETS`: 2021-22 `v928-8kke`, 2022-23 `xh7m-utwp`, 2023-24 `x73g-mrqp`, 2024-25 `h5d9-vgwi`) plus enrollment, cached as CSV in the gitignored `analysis/out/`. SBAC ELA/Math, grades 03-08 and 10, nine student groups. `_sanity_check_ids()` raises if the 2023-24/2024-25 IDs disagree with `DATASET_IDS` in [config/settings.py](dataset-vocabulary.md). `refresh=True` / `--refresh` re-pulls.
-- **`benchmarks.py`**: `cells()` is the shared filter (floor of 20 in both years); `entity_scores`, `profile`, then six section functions (`summary`, `size`, `quartile`, `persistence`, `validity`, `threeyear`) invoked via `python analysis/benchmarks.py all|<sections> [--refresh]`.
+- **`benchmarks.py`**: `cells()` is the shared filter (floor of 20 in both years). `entity_scores` then drops entities with fewer surviving cells than `MIN_CELLS` (2 for schools, 4 for districts), so a weighted score is only used when it spans enough grade x subject cells. `profile` builds enrollment context, and `SIZE_BANDS` / `COHORT_BANDS` / `QUARTILE_BANDS` define the size and cohort groupings used by the sections. Six section functions (`summary`, `size`, `quartile`, `persistence`, `validity`, `threeyear`) invoked via `python analysis/benchmarks.py all|<sections> [--refresh]`.
 - **`stats_lite.py`**: numpy-only `spearman`, `spearman_p` (permutation), `auc`, `wilson`, `binom_sf`, `five_number`; the project deliberately has no scipy dependency.
-- **`artifact_data.py`**: `build_rows`/`build_panel` write `data.json` and `topq.json` for the interactive "Typical Year" artifact (`--out <dir>`), reusing `cells()` so numbers agree. Transition names must keep the arrow character and band labels verbatim because the artifact page reads them.
+- **`artifact_data.py`**: `build_rows`/`build_panel` write `data.json` and `topq.json` for the interactive "Typical Year" artifact (`--out <dir>`), reusing `cells()` so numbers agree; the output is deterministic. Transition names must keep the arrow character and band labels verbatim because the artifact page reads them.
 
 ## Findings worth knowing (from `docs/improvement-benchmarks.md`, analysis date there)
 
@@ -45,3 +45,4 @@ Each school year is a separate non-cumulative dataset; suppressed values are the
 - Add a new school year: add its dataset ID to `ASSESSMENT_DATASETS`, update `YEAR_ALIASES` if group spellings shift, run `python analysis/benchmarks.py all --refresh`, then update the tables in `docs/improvement-benchmarks.md` and the aliases in the app settings (see [vocabulary](dataset-vocabulary.md)).
 - Validation: there are no tests for `analysis/`; run `python analysis/benchmarks.py summary` after cache exists (a first run downloads ~200k rows; slower without a Socrata token).
 - Related: it shares the Socrata domain and token handling with the app, per [Deployment and CI](../operations/deployment-and-ci.md).
+ng with the app, per [Deployment and CI](../operations/deployment-and-ci.md).
