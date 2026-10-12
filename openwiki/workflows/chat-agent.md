@@ -82,6 +82,4 @@ Non-goals: provider switching (Anthropic/OpenAI keys are reserved but unused), s
 
 ## Validation
 
-`pytest tests/test_tools.py -q` covers schema shape, Gemini conversion (enum preserved), and each tool's formatting with a mocked client (no results, results, suppressed, trend). The agent loop and the page have no tests; calling Gemini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.
-ini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.
-and is a conditional manual check only when `agent.py` changes.
+`pytest tests/test_tools.py -q` covers schema shape and tool count (`TestToolSchemas`: `test_expected_tool_count` asserts 8, `test_tool_names`), Gemini conversion with the enum preserved (`TestGeminiToolConversion`), and each tool's formatting with a mocked client (`TestExecuteTool`, patching `src.chat.tools.get_client`; no-results, results, suppressed, trend cases; `test_unknown_tool`). The `analyze_correlation` branch has no formatting test. The agent loop and the page have no tests; calling Gemini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.

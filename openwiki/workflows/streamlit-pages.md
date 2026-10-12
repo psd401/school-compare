@@ -68,6 +68,3 @@ Stateless `create_*` functions return `go.Figure`: `create_achievement_compariso
 - New metric on Correlations: add to `METRICS` (and `SCHOOL_METRICS` if school-level) in `src/data/combined.py`; run `pytest tests/test_combined.py` (it asserts exact counts 19 and 10, so update them), and update the `analyze_correlation` enums in [chat tools](chat-agent.md#extension-recipes).
 - New per-entity data on Comparison/Explorer: add the client call inside the loading `st.status` block; keep spending district-only.
 - Avoid putting heavy per-group loops outside toggles/expanders.
-lation` enums in [chat tools](chat-agent.md#extension-recipes).
-- New per-entity data on Comparison/Explorer: add the client call inside the loading `st.status` block; keep spending district-only.
-- Avoid putting heavy per-group loops outside toggles/expanders.
