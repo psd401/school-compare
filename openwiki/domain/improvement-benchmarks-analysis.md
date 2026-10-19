@@ -45,4 +45,3 @@ Each school year is a separate non-cumulative dataset; suppressed values are the
 - Add a new school year: add its dataset ID to `ASSESSMENT_DATASETS`, update `YEAR_ALIASES` if group spellings shift, run `python analysis/benchmarks.py all --refresh`, then update the tables in `docs/improvement-benchmarks.md` and the aliases in the app settings (see [vocabulary](dataset-vocabulary.md)).
 - Validation: there are no tests for `analysis/`; run `python analysis/benchmarks.py summary` after cache exists (a first run downloads ~200k rows; slower without a Socrata token).
 - Related: it shares the Socrata domain and token handling with the app, per [Deployment and CI](../operations/deployment-and-ci.md).
-ng with the app, per [Deployment and CI](../operations/deployment-and-ci.md).
