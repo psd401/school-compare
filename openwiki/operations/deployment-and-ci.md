@@ -34,10 +34,10 @@ Hosted on Streamlit Community Cloud (main file `app.py`; secrets set in Advanced
 
 ## CI (`.github/workflows/`)
 
-All three call org-owned reusable workflows in `PSD401/.github` at `@main` (deliberate, per comments):
+All three call org-owned reusable workflows in `PSD401/.github`, each pinned to a full commit SHA with a `# v1.0.0` comment (not `@main`). `.github/dependabot.yml` (github-actions ecosystem, weekly, 7-day cooldown) proposes updates to those SHA pins, so a pin bump is a reviewed change rather than a silent upstream change:
 - `claude-review.yml`: on PR `opened`, `synchronize`, `ready_for_review` and `reopened`; skipped when the actor is `dependabot[bot]`; needs `id-token: write`; passes `BEDROCK_API_KEY`.
 - `security-scan.yml`: on PRs, push to main, weekly (Monday 09:00 UTC), manual; read-only permissions.
-- `openwiki-update.yml`: on push to main, weekly Monday 08:00 UTC, manual; regenerates this wiki with contents/PR write permission; passes the `BEDROCK_API_KEY` and `PSD_AUTOMATION_APP_PRIVATE_KEY` secrets; concurrency group `openwiki` cancels superseded runs.
+- `openwiki-update.yml`: on push to main, weekly Monday 08:00 UTC, manual; regenerates this wiki with `contents: write` and `pull-requests: write` permissions; passes the `BEDROCK_API_KEY` and `PSD_AUTOMATION_APP_PRIVATE_KEY` secrets; concurrency group `openwiki` cancels superseded runs.
 
 No workflow runs `pytest`; run tests locally ([Testing](../testing/testing.md)). Do not hand-edit generated OpenWiki pages unless asked (see `AGENTS.md`).
 

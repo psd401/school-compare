@@ -35,7 +35,7 @@ WA School Compare is a Streamlit app that compares Washington State schools and 
 | Data client behavior, models | [Architecture](architecture/overview.md), [Testing](testing/testing.md) | `src/data/` (excluded from wiki) | `OSPIClient`, `_query`, `_paginated_get` | `tests/test_data_resilience.py`, `tests/test_client_helpers.py`, `tests/test_models.py` | `pytest tests/test_data_resilience.py -q` |
 | Home page stats / cache warming | [Architecture](architecture/overview.md) | `app.py` | `_get_homepage_stats`, `main` | none | `streamlit run app.py` |
 | Benchmark analysis | [Improvement benchmarks](domain/improvement-benchmarks-analysis.md) | `analysis/benchmarks.py`, `analysis/fetch.py` | `cells`, `ASSESSMENT_DATASETS` | none | `python analysis/benchmarks.py summary` |
-| Env vars, deploy, CI, dev container | [Deployment and CI](operations/deployment-and-ci.md) | `pyproject.toml`, `.streamlit/config.toml`, `.devcontainer/devcontainer.json`, `.github/workflows/` | - | - | `ruff check .` |
+| Env vars, deploy, CI, dev container | [Deployment and CI](operations/deployment-and-ci.md) | `pyproject.toml`, `.streamlit/config.toml`, `.devcontainer/devcontainer.json`, `.github/workflows/`, `.github/dependabot.yml` | - | - | `ruff check .` |
 
 Expensive/conditional: `analysis/benchmarks.py ... --refresh` re-downloads ~200k rows (only after OSPI publishes a new year). Live-API behavior is not covered by tests.
 
