@@ -48,7 +48,8 @@ Defaults: `DEFAULT_YEAR = "2023-24"` for assessment/graduation, but README state
 
 ## Change navigation
 
-- Consult when adding a student group, grade, school year, or dataset.
+- Consult when adding a student group, grade, school year, dataset, or assessment subject.
+- Subject values are hard-coded in several places rather than read from one constant: the Comparison and Explorer selectors, the `create_achievement_comparison` default in `src/viz/charts.py`, and the `get_assessment_data` enum in `src/chat/tools.py`. Keep them in sync when a subject is added. The [Streamlit pages](../workflows/streamlit-pages.md#subject-selectors) and [Chat agent](../workflows/chat-agent.md#extension-recipes) pages describe those call sites.
 - Adding a new school year: add dataset ID(s) to `DATASET_IDS` and `config/datasets.yaml`, extend `analysis/fetch.py` `ASSESSMENT_DATASETS`, and check alias cut-offs in `STUDENT_GROUP_YEAR_ALIASES`. Year-routing in `src/data/client.py` is not visible to this wiki (excluded).
 - Adding a student group: put the literal API spelling in the core or extended list, add a tidy label only if it differs, update the enum text in the `get_assessment_data` tool description in `src/chat/tools.py` ([Chat agent](../workflows/chat-agent.md)).
 - Tests: `tests/test_grade_levels.py` (classes covering code/label round trip, no overlap between core and extended, alias spelling by year). Validate: `pytest tests/test_grade_levels.py -q`.
