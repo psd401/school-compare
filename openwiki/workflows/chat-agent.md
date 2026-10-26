@@ -59,7 +59,7 @@ sequenceDiagram
 | Tool | Client call | Key behavior |
 |---|---|---|
 | `search_schools`, `search_districts` | `client.search_*(query, limit=10)` | lists codes the model then passes on |
-| `get_assessment_data` | `client.get_assessment_data` | defaults 2023-24, All Students, All Grades; normalizes grade via `grade_code`; flags suppressed rows |
+| `get_assessment_data` | `client.get_assessment_data` | defaults 2023-24, All Students, All Grades; `subject` enum `ELA`/`Math`/`Science` (Science covers WCAS); normalizes grade via `grade_code`; flags suppressed rows |
 | `get_demographics` | `get_demographics` | default 2024-25; Race/Ethnicity plus three program groups |
 | `get_graduation_data` | `get_graduation_data` | only `All Students` rows |
 | `get_staffing_data` | `get_staffing_data` | uses first result row |
@@ -83,3 +83,4 @@ Non-goals: provider switching (Anthropic/OpenAI keys are reserved but unused), s
 ## Validation
 
 `pytest tests/test_tools.py -q` covers schema shape and tool count (`TestToolSchemas`: `test_expected_tool_count` asserts 8, `test_tool_names`), Gemini conversion with the enum preserved (`TestGeminiToolConversion`), and each tool's formatting with a mocked client (`TestExecuteTool`, patching `src.chat.tools.get_client`; no-results, results, suppressed, trend cases; `test_unknown_tool`). The `analyze_correlation` branch has no formatting test. The agent loop and the page have no tests; calling Gemini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.
+KEY` and is a conditional manual check only when `agent.py` changes.

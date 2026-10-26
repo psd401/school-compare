@@ -13,6 +13,7 @@ openwiki:
     - Comparison allows at most 5 entities in st.session_state.selected_entities.
     - Spending is requested only for District entities.
     - Explorer mirrors type, id and year into st.query_params.
+    - Assessment subject selectors offer ELA, Math and Science.
   validation_commands: ["pytest tests/test_combined.py -q"]
 ---
 
@@ -25,7 +26,7 @@ All pages obtain data through `get_client()` (an `OSPIClient`, in the excluded `
 - Sidebar: choose Districts or Schools, search (≥2 chars, `search_districts`/`search_schools` limit 20), add to `st.session_state.selected_entities` as `{"id","name","type"}`. Hard cap 5, duplicates rejected.
 - Main: school year (`client.get_available_years()`), student group (core, or core+extended via "Show all subgroups"), and grade level; options come from [`Settings`](../domain/dataset-vocabulary.md).
 - Loading: inside one `st.status` block it loops entities and calls `get_assessment_data`, `get_demographics`, `get_graduation_data`, `get_staffing_data`; for districts only, `get_spending_data(org_id, school_year[2:])`, `get_spending_trend`, `get_enrollment_trend`, `get_spending_by_category`.
-- Seven tabs: Achievement (with a Subgroup Analysis expander that calls assessment once per `STUDENT_GROUPS_CORE` and needs ≥2 non-suppressed groups), Score Distribution, Demographics, Graduation (Four/Five Year radio), Staffing (chart + CSV), Spending (district-only notice for schools), Trends (last 5 `available_years`, requires ≥2).
+- Seven tabs: Achievement (with a Subgroup Analysis expander that calls assessment once per `STUDENT_GROUPS_CORE` and needs ≥2 non-suppressed groups), Score Distribution, Demographics, Graduation (Four/Five Year radio), Staffing (chart + CSV), Spending (district-only notice for schools), Trends (subject selector ELA/Math/Science; last 5 `available_years`, requires ≥2).
 - Data is keyed by display name in dicts, so two entities with the same display name would collide.
 
 ## Explorer (`pages/2_explorer.py`)
@@ -62,9 +63,14 @@ Static intro, three live metrics, cache warming and dataset validation; details 
 
 Stateless `create_*` functions return `go.Figure`: `create_achievement_comparison`, `create_score_distribution`, `create_demographics_chart`, `create_program_demographics_chart`, `create_trend_chart`, `create_graduation_chart`, `create_staffing_chart`, `create_spending_chart`, `create_spending_trend_chart`, `create_equity_gap_chart`, `create_spending_breakdown_chart`, `create_enrollment_trend_chart`, `create_subgroup_proficiency_chart`, `create_grade_breakdown_chart`, `create_correlation_scatter`, `create_multi_entity_trend_chart`, and `add_suppression_footnote`. Shared `COLORS` and `ENTITY_COLORS` (Set2) keep styling consistent; performance levels 1-4 map red/orange/green/blue. `create_correlation_scatter` returns an empty-state chart (`_empty_chart`) when required columns are missing or no rows have both metrics, and overlays a regression line (R²) per the page text.
 
+## Subject selectors
+
+Assessment subject is chosen with a literal `st.selectbox` in each place it appears, not from a shared list: Comparison Achievement subgroup (`comp_subgroup_subject`), Comparison Score Distribution (`dist_subject`), Explorer Score Distribution (`explorer_subject`), and Explorer subgroup analysis (`explorer_subgroup_subject`). Every selector offers `["ELA", "Math", "Science"]`. Explorer's grade-level breakdown and assessment trend loop over the same three subjects. The page caption says Science is tested only in grades 5, 8, and 11, so Science can be empty for other grades. Vocabulary rules are in [Dataset vocabulary](../domain/dataset-vocabulary.md#literal-values-vs-display-labels); the chat tool's matching enum is in [Chat agent](chat-agent.md#extension-recipes).
+
 ## Change navigation
 
 - New chart: add `create_*` to `charts.py` taking dataclasses/DataFrames (types from `src.data.models`), import it from `src.viz.charts` in the page (add it to `src/viz/__init__.py` only if the package-level import is needed), render with `st.plotly_chart(fig, width="stretch")`. There are no chart tests; verify by running the app page with `streamlit run app.py`.
 - New metric on Correlations: add to `METRICS` (and `SCHOOL_METRICS` if school-level) in `src/data/combined.py`; run `pytest tests/test_combined.py` (it asserts exact counts 19 and 10, so update them), and update the `analyze_correlation` enums in [chat tools](chat-agent.md#extension-recipes).
 - New per-entity data on Comparison/Explorer: add the client call inside the loading `st.status` block; keep spending district-only.
 - Avoid putting heavy per-group loops outside toggles/expanders.
+.
