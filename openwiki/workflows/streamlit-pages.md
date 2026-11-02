@@ -69,8 +69,9 @@ Assessment subject is chosen with a literal `st.selectbox` in each place it appe
 
 ## Change navigation
 
-- New chart: add `create_*` to `charts.py` taking dataclasses/DataFrames (types from `src.data.models`), import it from `src.viz.charts` in the page (add it to `src/viz/__init__.py` only if the package-level import is needed), render with `st.plotly_chart(fig, width="stretch")`. There are no chart tests; verify by running the app page with `streamlit run app.py`.
+- New chart: add `create_*` to `charts.py` taking dataclasses/DataFrames (types from `src.data.models`), import it from `src.viz.charts` in the page (`src/viz/__init__.py` re-exports only seven charts in `__all__`: achievement comparison, score distribution, demographics, trend, staffing, spending and spending trend; add a new chart there only if the package-level import is needed), render with `st.plotly_chart(fig, width="stretch")`. There are no chart tests; verify by running the app page with `streamlit run app.py`.
 - New metric on Correlations: add to `METRICS` (and `SCHOOL_METRICS` if school-level) in `src/data/combined.py`; run `pytest tests/test_combined.py` (it asserts exact counts 19 and 10, so update them), and update the `analyze_correlation` enums in [chat tools](chat-agent.md#extension-recipes).
 - New per-entity data on Comparison/Explorer: add the client call inside the loading `st.status` block; keep spending district-only.
 - Avoid putting heavy per-group loops outside toggles/expanders.
-.
+loading `st.status` block; keep spending district-only.
+- Avoid putting heavy per-group loops outside toggles/expanders.

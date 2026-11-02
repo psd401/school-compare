@@ -33,7 +33,7 @@ openwiki:
 
 Spending (F-196) is not on Socrata; it comes from local files under `data/f196/` (ignored from this wiki). Domain is `SOCRATA_DOMAIN = "data.wa.gov"`. Historical assessment IDs for 2021-22 (`v928-8kke`) and 2022-23 (`xh7m-utwp`) appear only in `analysis/fetch.py` because the app queries only the two newest datasets; `_sanity_check_ids()` there fails loudly if the two sources drift. See [Improvement benchmarks analysis](improvement-benchmarks-analysis.md).
 
-Defaults: `DEFAULT_YEAR = "2023-24"` for assessment/graduation, but README states demographics and staffing default to 2024-25 (released earlier). `MAX_COMPARISON_ENTITIES = 5`.
+Defaults: the README states assessment and graduation default to 2023-24 and demographics, staffing, and spending to 2024-25. The actual defaults live at call sites: the chat tools in `src/chat/tools.py` hard-code `"2023-24"` or `"2024-25"` per tool, and the pages pick the newest available year. `Settings.DEFAULT_YEAR = "2023-24"` and `Settings.MAX_COMPARISON_ENTITIES = 5` are defined in `config/settings.py` but are not read by the pages or chat tools, so changing them alone does not change behavior (the Comparison cap is hard-coded in `pages/1_comparison.py`). Treat them as documentation of intent until a caller reads them.
 
 ## Literal values vs display labels
 

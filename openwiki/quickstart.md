@@ -44,11 +44,10 @@ Expensive/conditional: `analysis/benchmarks.py ... --refresh` re-downloads ~200k
 - Spending (F-196) exists only for districts; the Spending code paths are gated on `org_level == "District"`.
 - Query values must be literal dataset strings (`"03"`, `"Hispanic/ Latino of any race(s)"`); use `Settings` helpers for labels.
 - Suppressed data (small n) is shown as `*`/N/A, not zero.
+- The Comparison cap of 5 entities is hard-coded in `pages/1_comparison.py`; `Settings.MAX_COMPARISON_ENTITIES` is not read by any page ([Dataset vocabulary](domain/dataset-vocabulary.md#settings-and-secrets)).
 - Assessment subjects are `ELA`, `Math`, and `Science`; the Explorer page says Science is tested only in grades 5, 8, and 11 ([Streamlit pages](workflows/streamlit-pages.md#subject-selectors)).
 
 ## Backlog
 
 - `src/data/` (`client.py`, `models.py`, `combined.py`): excluded by `.openwikiignore` (`data/` pattern matches `src/data/`), so the Socrata client, dataclasses and `METRICS` registry are documented only through their consumers and tests. Un-ignore (e.g. anchor the pattern as `/data/`) to document them.
-
-o the Socrata client, dataclasses and `METRICS` registry are documented only through their consumers and tests. Un-ignore (e.g. anchor the pattern as `/data/`) to document them.
 
