@@ -16,7 +16,7 @@ openwiki:
 
 Python 3.11+ (`requires-python` in `pyproject.toml`). `pip install -e ".[dev]"` (dev extras: pytest, pytest-cov, ruff), copy `.env.example` to `.env`, then `streamlit run app.py`. Ruff config: line length 100, rules `E,F,I,UP`, `E501` ignored. `requirements.txt` exists for hosted installs; dependencies in `pyproject.toml` are streamlit, pandas, plotly, sodapy, google-genai, python-dotenv, pyyaml, openpyxl. `analysis/` additionally uses numpy (transitively via pandas).
 
-The dev container (`.devcontainer/devcontainer.json`, `python:1-3.11-bookworm` image) installs `requirements.txt` on creation and starts `streamlit run app.py` on port 8501 after attach, with `--server.enableCORS false --server.enableXsrfProtection false`. `.streamlit/config.toml` sets theme colours and `server.headless = true`; these are the only Streamlit server settings in the repo.
+The dev container (`.devcontainer/devcontainer.json`, `python:1-3.11-bookworm` image) installs `requirements.txt` through its `updateContentCommand` and starts `streamlit run app.py` on port 8501 after attach, with `--server.enableCORS false --server.enableXsrfProtection false`. `.streamlit/config.toml` sets theme colours and `server.headless = true`; these are the only Streamlit server settings in the repo.
 
 ## Configuration
 

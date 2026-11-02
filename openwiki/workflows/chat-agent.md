@@ -52,7 +52,7 @@ sequenceDiagram
 
 - **`pages/3_chat.py`**: refuses to run (shows an error and info link) when `Settings.has_google_key` is false, otherwise keeps `messages` and a single `ChatAgent` in `st.session_state`. Rebuilds history excluding the current prompt, catches any exception and displays "Sorry, I encountered an error". "Clear Chat History" empties `messages`.
 - **`_build_page_context()`**: emits `[SESSION CONTEXT] ... [END CONTEXT]` listing entities in `st.session_state.selected_entities` (from [Comparison](streamlit-pages.md)) and the Explorer's `type/id/year` query params. `ChatAgent.chat` appends it to `SYSTEM_PROMPT` for that turn by building a fresh `GenerateContentConfig`.
-- **`ChatAgent`** (`src/chat/agent.py`): model, max tokens, temperature come from [`Settings`](../domain/dataset-vocabulary.md#settings-and-secrets). History roles are mapped to `user`/`model`. Because the loop only reads `response.function_calls[0]`, parallel calls in one turn are dropped; the loop has no iteration cap. `get_response` is the non-streaming wrapper (joins `chat`).
+- **`ChatAgent`** (`src/chat/agent.py`): model, max tokens, temperature come from [`Settings`](../domain/dataset-vocabulary.md#settings-and-secrets). History roles are mapped to `user`/`model`. Because the loop only reads `response.function_calls[0]`, parallel calls in one turn are dropped; the loop has no iteration cap. `get_response` is the non-streaming wrapper (joins `chat`). `src/chat/__init__.py` re-exports `ChatAgent` and `AVAILABLE_TOOLS` (an alias of `TOOL_SCHEMAS`), but the page imports `ChatAgent` from `src.chat.agent` directly.
 - **`SYSTEM_PROMPT`** (`src/chat/prompts.py`): states the seven capabilities, the district-only spending rule, 2014-15 to 2024-25 years, behavioral rules (search first, note suppression, cite year), and "cannot" list. `TOOL_DESCRIPTIONS` there duplicates the tool descriptions but is not referenced by the agent; the authoritative text is in `TOOL_SCHEMAS`.
 - **Tools** (`src/chat/tools.py`): `TOOL_SCHEMAS` (generic `input_schema` form) are converted by `_convert_to_gemini_declaration` into `parameters_json_schema` and wrapped in `GEMINI_TOOLS` (one `types.Tool`). `execute_tool(tool_name, tool_input)` is an if/elif chain returning markdown strings, "No ... found" messages for empty results, and `Unknown tool: ...` otherwise.
 
@@ -70,7 +70,7 @@ sequenceDiagram
 
 ## Extension recipes
 
-**Add a tool**: (1) append a schema to `TOOL_SCHEMAS`; (2) add an `elif tool_name == ...` branch in `execute_tool` returning a string; (3) mention it in `SYSTEM_PROMPT` capabilities and optionally `TOOL_DESCRIPTIONS`; (4) update `tests/test_tools.py` (`test_expected_tool_count`, `test_tool_names`, and a mocked-client result test using `mock_get_client`). `GEMINI_TOOLS` is built at import, so no extra registration exists. No bundled/generated mirror exists.
+**Add a tool**: (1) append a schema to `TOOL_SCHEMAS`; (2) add an `elif tool_name == ...` branch in `execute_tool` returning a string; (3) mention it in `SYSTEM_PROMPT` capabilities and optionally `TOOL_DESCRIPTIONS`; (4) update `tests/test_tools.py` (`test_expected_tool_count`, `test_tool_names`, and a mocked-client result test using `mock_get_client`). `GEMINI_TOOLS` is built at import, so no extra registration exists. `AVAILABLE_TOOLS` aliases `TOOL_SCHEMAS` and the `src/chat/__init__.py` re-export follows it, so only the schema list needs editing. No bundled/generated mirror exists.
 
 **Add or rename a correlation metric**: update both `x_metric` and `y_metric` enums in the schema together with `METRICS` in `src/data/combined.py` ([pages](streamlit-pages.md#change-navigation)).
 
@@ -83,4 +83,3 @@ Non-goals: provider switching (Anthropic/OpenAI keys are reserved but unused), s
 ## Validation
 
 `pytest tests/test_tools.py -q` covers schema shape and tool count (`TestToolSchemas`: `test_expected_tool_count` asserts 8, `test_tool_names`), Gemini conversion with the enum preserved (`TestGeminiToolConversion`), and each tool's formatting with a mocked client (`TestExecuteTool`, patching `src.chat.tools.get_client`; no-results, results, suppressed, trend cases; `test_unknown_tool`). The `analyze_correlation` branch has no formatting test. The agent loop and the page have no tests; calling Gemini needs a real `GOOGLE_API_KEY` and is a conditional manual check only when `agent.py` changes.
-KEY` and is a conditional manual check only when `agent.py` changes.
