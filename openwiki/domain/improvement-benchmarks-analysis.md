@@ -26,15 +26,20 @@ Purpose: set improvement targets against the observed distribution of year-over-
 - **`stats_lite.py`**: numpy-only `spearman`, `spearman_p` (permutation), `auc`, `wilson`, `binom_sf`, `five_number`; the project deliberately has no scipy dependency.
 - **`artifact_data.py`**: `build_rows`/`build_panel` write `data.json` and `topq.json` for the interactive "Typical Year" artifact (`--out <dir>`), reusing `cells()` so numbers agree; the output is deterministic. Transition names must keep the arrow character and band labels verbatim because the artifact page reads them.
 
-## Findings worth knowing (from `docs/improvement-benchmarks.md`, analysis date there)
+## Findings worth knowing (from `docs/improvement-benchmarks.md`, analysis date 2026-08-25, data through 2024-25)
 
-- Median year-over-year change is under one point; roughly 46-47% of schools decline in a year.
-- Spread is driven by tested cohort size (IQR 18.2 for 20-40 students vs 7.2 above 150), so compare within size bands.
-- One-year top-quartile rankings repeat at or below chance; "gained three years running" must be judged against year-specific base rates.
+- Median year-over-year change is under one point (+0.6 to +0.8 across school and district ELA/Math); roughly 46-47% of schools decline in a year. Grade 10 ELA is the weakest grade (median -1.2).
+- Spread is driven by tested cohort size (IQR 18.2 for 20-40 students vs 7.2 above 150), so compare within size bands. Among districts over 5,000 students the middle half moves between about -1 and +3 points in a year.
+- Ranking by one-year improvement mostly ranks by size; one-year top-quartile rankings repeat at or below chance (23% vs 25% chance for all districts; none of the school bands reach it). "Gained three years running" must be judged against year-specific base rates (23 of 102 districts vs 28.1 expected).
 - ELA/Math agreement is not independent evidence (same students).
-- Three-year change shows signal within a grade band (elementary, middle) but not across bands.
+- Three-year change shows signal within a grade band (elementary, middle) but not across bands. For districts over 5,000, the three-year total median is +1.66, 16% reached +4, and no district has posted +3 in three consecutive years.
+- Starting proficiency does not predict later gain (rho near zero across year pairs).
 
-Treat the numbers as snapshot results; regenerate rather than hand-editing figures.
+Recommendations from the same note: compare within a size band; prefer three-year totals to annual change; set targets by grade band; treat one strong year as unverified; and calibrate targets against the observed distribution (a +4 three-year total is reached by about one district in six).
+
+Caveats: percent proficient is a status measure that reflects enrollment and testing mix; 220 of roughly 300 districts survive the filters in the latest transition; only three year pairs are usable.
+
+Treat the numbers as snapshot results; regenerate rather than hand-editing figures. The note's narrative is maintained in `docs/`; this page only summarizes it.
 
 ## Pitfalls
 
