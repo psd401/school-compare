@@ -17,7 +17,7 @@ pytest config (`pyproject.toml`): `testpaths = ["tests"]`, `pythonpath = ["."]`.
 | Area / behavior | File and suites | Source under test |
 |---|---|---|
 | Chat tool schemas, Gemini conversion (enum preserved, `GEMINI_TOOLS` is a `types.Tool`), per-tool output formatting, unknown tool | `tests/test_tools.py`: `TestToolSchemas`, `TestGeminiToolConversion`, `TestExecuteTool` | [`src/chat/tools.py`](../workflows/chat-agent.md) |
-| Grade codes vs labels, round-trip, student-group labels and per-year aliases | `tests/test_grade_levels.py`: `TestGradeLevelConstants`, `TestGradeLabel`, `TestGradeCode`, `TestStudentGroupForYear` | `config/settings.py` ([vocabulary](../domain/dataset-vocabulary.md)) |
+| Grade codes vs labels, round-trip, student-group constants (no core/extended overlap), student-group labels and per-year aliases | `tests/test_grade_levels.py`: `TestGradeLevelConstants`, `TestGradeLabel`, `TestGradeCode`, `TestStudentGroupConstants`, `TestStudentGroupLabel`, `TestStudentGroupForYear` | `config/settings.py` ([vocabulary](../domain/dataset-vocabulary.md)) |
 | `METRICS` (19) / `SCHOOL_METRICS` (10) shape, label/format helpers, NaN -> "N/A" | `tests/test_combined.py` | `src/data/combined.py` ([Correlations](../workflows/streamlit-pages.md#correlations-pages4_correlationspy)) |
 | `_query` returns `[]` on errors, zero/None enrollment gives `None` percent, dynamic year range, `_paginated_get`, `validate_datasets`, lookup by code | `tests/test_data_resilience.py` | `src/data/client.py`, `combined.py` |
 | `_safe_float/_safe_percent/_safe_int` parsing | `tests/test_client_helpers.py` | `src/data/client.py` |
